@@ -1,0 +1,4 @@
+VITE_API_URL="http://localhost:3000/api"
+
+
+FIREBASE_WEB_API_KEY="AIzaSyAEkx8nAQX9A9AiMvQ5DGRyihVkSOvtpdc"
