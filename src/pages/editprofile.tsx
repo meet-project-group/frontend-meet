@@ -16,6 +16,7 @@ export default function EditProfile() {
     email: "",
     age: "",
   });
+
   console.log("USER DESDE AUTH:", user);
 
   // Cargar datos actuales del usuario
@@ -37,9 +38,9 @@ export default function EditProfile() {
   async function handleSubmit(e: any) {
     e.preventDefault();
     console.log("USUARIO EN EDITPROFILE:", user);
+
     if (!user?.uid) {
       alert("Usuario no válido");
-      
       return;
     }
 
@@ -65,7 +66,7 @@ export default function EditProfile() {
 
       // 2️⃣ Actualizar backend
       const res = await fetch(
-        `http://localhost:3000/api/users/${user.uid}`,
+        `${import.meta.env.VITE_API_URL}/api/users/${user.uid}`,
         {
           method: "PUT",
           headers: {
@@ -94,7 +95,6 @@ export default function EditProfile() {
       });
 
       alert("Perfil actualizado correctamente");
-
     } catch (error) {
       console.error(error);
       alert("Hubo un error actualizando el perfil");
@@ -129,7 +129,6 @@ export default function EditProfile() {
       {/* FORM */}
       <div className="edit-profile-container">
         <div className="edit-card">
-
           <div className="profile-photo">
             <div className="circle">
               <span className="icon">👤</span>
@@ -138,13 +137,10 @@ export default function EditProfile() {
           </div>
 
           <div className="username-section">
-            <h2 className="username">
-              {form.firstName || "Usuario"}
-            </h2>
+            <h2 className="username">{form.firstName || "Usuario"}</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="edit-form">
-            
             <label>Nombre</label>
             <input
               type="text"
@@ -177,7 +173,9 @@ export default function EditProfile() {
               onChange={handleChange}
             />
 
-            <button type="submit" className="btn-save">Guardar</button>
+            <button type="submit" className="btn-save">
+              Guadar
+            </button>
           </form>
         </div>
       </div>
@@ -189,28 +187,36 @@ export default function EditProfile() {
 
         <div className="footer-columns">
           <div>
-            <p><strong>ACCESO</strong></p>
+            <p>
+              <strong>ACCESO</strong>
+            </p>
             <p>Iniciar Sesión</p>
             <p>Crear cuenta</p>
             <p>Recuperar contraseña</p>
           </div>
 
           <div>
-            <p><strong>CUENTA Y SOPORTE</strong></p>
+            <p>
+              <strong>CUENTA Y SOPORTE</strong>
+            </p>
             <p>Editar perfil</p>
             <p>Sobre nosotros</p>
             <p>Contacto</p>
           </div>
 
           <div>
-            <p><strong>NAVEGACIÓN</strong></p>
+            <p>
+              <strong>NAVEGACIÓN</strong>
+            </p>
             <p>Inicio</p>
             <p>Sobre nosotros</p>
             <p>Reuniones</p>
           </div>
 
           <div>
-            <p><strong>CONTACTO</strong></p>
+            <p>
+              <strong>CONTACTO</strong>
+            </p>
             <p>uvmeet@gmail.com</p>
           </div>
         </div>
