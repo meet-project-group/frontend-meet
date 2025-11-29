@@ -65,16 +65,16 @@ export default function EditProfile() {
 
       // 2️⃣ Actualizar backend
       const res = await fetch(
-  `${import.meta.env.VITE_API_URL}/api/users/${user.uid}`,
-  {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(form),
-  }
-);
+        `http://localhost:3000/api/users/${user.uid}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(form),
+        }
+      );
 
       const data = await res.json();
 
