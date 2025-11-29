@@ -41,15 +41,15 @@ const Home = () => {
 
 const copyCode = async () => {
   try {
-    const url = `${window.location.origin}/room/${meetingCode}`;
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(meetingCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   } catch (err) {
     console.error("Error copiando:", err);
-    alert("No se pudo copiar el enlace");
+    alert("No se pudo copiar el código");
   }
 };
+
 
   const handleShare = async () => {
     const url = `${window.location.origin}/room/${meetingCode}`;
