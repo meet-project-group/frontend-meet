@@ -18,7 +18,10 @@ export default function ForgotPassword(): JSX.Element {
     setMessage(null);
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, {
+        url: "https://frontend-meet-mocha.vercel.app/resetpassword",
+        handleCodeInApp: true,
+      });
 
       setMessage("Si el correo existe, recibirá instrucciones para recuperar su contraseña.");
     } catch (error: any) {
