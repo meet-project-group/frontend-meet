@@ -67,7 +67,6 @@ export default function EditProfile() {
       // 2️⃣ Actualizar backend
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/users/${user.uid}`,
-
         {
           method: "PUT",
           headers: {
