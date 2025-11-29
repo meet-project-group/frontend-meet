@@ -56,67 +56,77 @@ export default function Login() {
       LOGIN CON GOOGLE
   ====================================================== */
   async function handleGoogleLogin() {
-    setErr(null);
+  setErr(null);
 
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
 
-      const firebaseToken = await result.user.getIdToken();
+    const result = await signInWithPopup(auth, provider);
 
-      const res = await loginRequest({
-        firebaseToken,
-        email: result.user.email ?? "",
-        provider: "google",
-      });
+    const firebaseToken = await result.user.getIdToken();
 
-      if (!res?.token || !res?.user) {
-        setErr("Respuesta inválida del servidor");
-        return;
-      }
+    const res = await loginRequest({
+      firebaseToken,
+      email: result.user.email ?? "",
+      provider: "google",
+    });
 
-      setToken(res.token);
-      setUser(res.user);
-
-      nav("/home");
-    } catch (error) {
-      console.error("Google Login Error:", error);
-      setErr("No se pudo iniciar sesión con Google");
+    if (!res?.token || !res?.user) {
+      setErr("Respuesta inválida del servidor");
+      return;
     }
+
+    setToken(res.token);
+    setUser(res.user);
+
+    nav("/home");
+  } catch (error) {
+    console.error("Google Login Error:", error);
+    setErr("No se pudo iniciar sesión con Google");
   }
+}
+
 
   /* =====================================================
       LOGIN CON GITHUB
   ====================================================== */
   async function handleGithubLogin() {
-    setErr(null);
+  setErr(null);
 
-    try {
-      const provider = new GithubAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+  try {
+    const provider = new GithubAuthProvider();
+    provider.addScope("user:email"); // <- obligatorio
 
-      const firebaseToken = await result.user.getIdToken();
+    const result = await signInWithPopup(auth, provider);
 
-      const res = await loginRequest({
-        firebaseToken,
-        email: result.user.email ?? "",
-        provider: "github",
-      });
+    const firebaseToken = await result.user.getIdToken();
 
-      if (!res?.token || !res?.user) {
-        setErr("Respuesta inválida del servidor");
-        return;
-      }
+    const res = await loginRequest({
+      firebaseToken,
+      email: result.user.email ?? "",
+      provider: "github",
+    });
 
-      setToken(res.token);
-      setUser(res.user);
+    if (!res?.token || !res?.user) {
+      setErr("Respuesta inválida del servidor");
+      return;
+    }
 
-      nav("/home");
-    } catch (error) {
-      console.error("GitHub Login Error:", error);
+    setToken(res.token);
+    setUser(res.user);
+
+    nav("/home");
+  } catch (error: any) {
+    console.error("GitHub Login Error:", error);
+
+    if (error?.code === "auth/account-exists-with-different-credential") {
+      setErr("Ese correo ya está registrado con otro método. Use Google o email.");
+    } else {
       setErr("No se pudo iniciar sesión con GitHub");
     }
   }
+}
 
   /* =====================================================
       UI
