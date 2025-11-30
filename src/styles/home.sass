@@ -285,10 +285,13 @@ $overlay: rgba(0, 0, 0, 0.45)
     /* ===== RESPONSIVE PARA CELULARES ===== */
 @media (max-width: 520px)
   /* Header */
-  .home-header
-    padding: 1rem
-    flex-direction: column
-    gap: .8rem
+  /* HEADER en móviles */
+.home-header
+  padding: 1rem
+  flex-direction: row
+  justify-content: space-between
+  align-items: center
+
 
   .logo
     height: 48px
