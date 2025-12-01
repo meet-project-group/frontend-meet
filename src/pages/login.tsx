@@ -172,7 +172,11 @@ export default function Login() {
           <p className="forgot-link">
             ¿Problemas al acceder a su cuenta? <a href="/forgot">Recuperar</a>
           </p>
-
+          
+          <p className="ressetpasword-link">
+            ¿Olvidó su contraseña? <a href="/ressetpasword">Cambiar</a>
+          </p>
+        </form>
 
         {/* Social login */}
         <div className="social-login">
