@@ -47,7 +47,7 @@ export default function RessetPasword(): JSX.Element {
       <div className="reset-card">
         <img
            src="/images/uvmeet-removebg-preview.png"
-           alt="UVMeet logo"
+           alt="UVMeet Logo"
            className="reset-logo"
         />
 
