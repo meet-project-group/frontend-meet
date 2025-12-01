@@ -4,15 +4,36 @@ import { useAuth } from "../components/AuthProvider";
 import "../styles/deleteaccount.sass";
 import Menu from "../components/menu";
 
+/**
+ * Componente para eliminar la cuenta del usuario.
+ * Permite mostrar un menú lateral, solicitar confirmación
+ * e ingresar la contraseña para validar la eliminación.
+ */
 export default function DeleteAccount() {
+  // Estado para abrir/cerrar el menú lateral
   const [openMenu, setOpenMenu] = useState(false);
+
+  // Estado que controla si el usuario ya pidió eliminar la cuenta (pantalla de confirmación)
   const [confirm, setConfirm] = useState(false);
+
+  // Contraseña ingresada por el usuario para validar la eliminación
   const [password, setPassword] = useState("");
+
+  // Muestra el estado de carga mientras se elimina la cuenta
   const [loading, setLoading] = useState(false);
 
+  // Obtiene la función deleteAccount desde el AuthProvider
   const { deleteAccount } = useAuth();
+
+  // Hook para navegar entre rutas
   const navigate = useNavigate();
 
+  /**
+   * Maneja todo el proceso de eliminación:
+   * - Verifica que haya contraseña
+   * - Pide confirmación al usuario
+   * - Llama a deleteAccount() del AuthProvider
+   */
   const handleDelete = async () => {
     if (!password || password.length < 6) {
       alert("Debe ingresar su contraseña antes de continuar.");
@@ -30,7 +51,7 @@ export default function DeleteAccount() {
     try {
       await deleteAccount(password);
       alert("Cuenta eliminada exitosamente.");
-      navigate("/login");
+      navigate("/login"); // Redirige tras borrar la cuenta
     } catch (err: any) {
       alert(err.message || "Error al eliminar la cuenta.");
     }
@@ -43,6 +64,7 @@ export default function DeleteAccount() {
       {/* HEADER */}
       <header className="delete-header">
         <div className="header-left">
+          {/* Botón que abre el menú lateral */}
           <button
             className="btn-menu"
             onClick={(e) => {
@@ -53,8 +75,10 @@ export default function DeleteAccount() {
             ☰
           </button>
 
+          {/* Menú lateral */}
           <Menu open={openMenu} setOpen={setOpenMenu} />
 
+          {/* Logo de UVMeet */}
           <img
             src="/images/uvmeet-removebg-preview.png"
             alt="UVMeet Logo"
@@ -66,10 +90,12 @@ export default function DeleteAccount() {
       {/* MAIN */}
       <div className="edit-profile-container">
         <div className="delete-card">
+          {/* Si aún no se pidió confirmación */}
           {!confirm ? (
             <>
               <h2 className="delete-title">¿DESEA ELIMINAR ESTA CUENTA?</h2>
 
+              {/* Botón que cambia al estado de confirmación */}
               <button
                 className="btn-delete-main"
                 onClick={() => setConfirm(true)}
@@ -80,11 +106,13 @@ export default function DeleteAccount() {
             </>
           ) : (
             <>
+              {/* Texto de advertencia + solicitud de contraseña */}
               <p className="delete-confirm-text">
                 Esta acción es permanente.  
                 <br />Ingrese su contraseña para confirmar:
               </p>
 
+              {/* Input de contraseña */}
               <input
                 type="password"
                 className="delete-password-input"
@@ -93,6 +121,7 @@ export default function DeleteAccount() {
                 onChange={(e) => setPassword(e.target.value)}
               />
 
+              {/* Botones de confirmar o cancelar */}
               <div className="delete-confirm-buttons">
                 <button
                   className="btn-confirm-delete"
@@ -120,6 +149,7 @@ export default function DeleteAccount() {
         <div className="footer-divider"></div>
         <h3>Mapa del sitio</h3>
 
+        {/* Enlaces del footer */}
         <div className="footer-columns">
           <div>
             <p><strong>ACCESO</strong></p>
@@ -151,3 +181,4 @@ export default function DeleteAccount() {
     </div>
   );
 }
+
