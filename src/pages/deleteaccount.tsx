@@ -5,34 +5,40 @@ import "../styles/deleteaccount.sass";
 import Menu from "../components/menu";
 
 /**
- * Componente para eliminar la cuenta del usuario.
- * Permite mostrar un menú lateral, solicitar confirmación
- * e ingresar la contraseña para validar la eliminación.
+ * DeleteAccount Component
+ * 
+ * This page allows the authenticated user to permanently delete their account.
+ * It handles:
+ * - Opening/closing the side menu
+ * - A two-step confirmation process
+ * - Asking the user for their password
+ * - Calling the deleteAccount() function from the authentication provider
  */
 export default function DeleteAccount() {
-  // Estado para abrir/cerrar el menú lateral
+  // Controls the visibility of the side menu
   const [openMenu, setOpenMenu] = useState(false);
 
-  // Estado que controla si el usuario ya pidió eliminar la cuenta (pantalla de confirmación)
+  // Indicates whether the user has entered the confirmation step
   const [confirm, setConfirm] = useState(false);
 
-  // Contraseña ingresada por el usuario para validar la eliminación
+  // Stores the password typed by the user for re-authentication
   const [password, setPassword] = useState("");
 
-  // Muestra el estado de carga mientras se elimina la cuenta
+  // Controls loading state during account deletion
   const [loading, setLoading] = useState(false);
 
-  // Obtiene la función deleteAccount desde el AuthProvider
+  // deleteAccount() is provided by AuthProvider (Firebase re-auth + delete)
   const { deleteAccount } = useAuth();
 
-  // Hook para navegar entre rutas
+  // For redirecting after deleting the account
   const navigate = useNavigate();
 
   /**
-   * Maneja todo el proceso de eliminación:
-   * - Verifica que haya contraseña
-   * - Pide confirmación al usuario
-   * - Llama a deleteAccount() del AuthProvider
+   * Handles the entire account deletion process:
+   * 1. Validates password
+   * 2. Shows a confirmation dialog
+   * 3. Calls deleteAccount(password)
+   * 4. Redirects the user back to login
    */
   const handleDelete = async () => {
     if (!password || password.length < 6) {
@@ -49,9 +55,9 @@ export default function DeleteAccount() {
     setLoading(true);
 
     try {
-      await deleteAccount(password);
+      await deleteAccount(password); // Firebase delete action
       alert("Cuenta eliminada exitosamente.");
-      navigate("/login"); // Redirige tras borrar la cuenta
+      navigate("/login"); // Redirect after deletion
     } catch (err: any) {
       alert(err.message || "Error al eliminar la cuenta.");
     }
@@ -64,7 +70,7 @@ export default function DeleteAccount() {
       {/* HEADER */}
       <header className="delete-header">
         <div className="header-left">
-          {/* Botón que abre el menú lateral */}
+          {/* Button that toggles the side menu */}
           <button
             className="btn-menu"
             onClick={(e) => {
@@ -75,10 +81,10 @@ export default function DeleteAccount() {
             ☰
           </button>
 
-          {/* Menú lateral */}
+          {/* Slide-out menu */}
           <Menu open={openMenu} setOpen={setOpenMenu} />
 
-          {/* Logo de UVMeet */}
+          {/* App logo */}
           <img
             src="/images/uvmeet-removebg-preview.png"
             alt="UVMeet Logo"
@@ -87,15 +93,14 @@ export default function DeleteAccount() {
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* MAIN CONTENT */}
       <div className="edit-profile-container">
         <div className="delete-card">
-          {/* Si aún no se pidió confirmación */}
+          {/* First step: ask if the user wants to delete the account */}
           {!confirm ? (
             <>
               <h2 className="delete-title">¿DESEA ELIMINAR ESTA CUENTA?</h2>
 
-              {/* Botón que cambia al estado de confirmación */}
               <button
                 className="btn-delete-main"
                 onClick={() => setConfirm(true)}
@@ -106,13 +111,13 @@ export default function DeleteAccount() {
             </>
           ) : (
             <>
-              {/* Texto de advertencia + solicitud de contraseña */}
+              {/* Second step: ask for the user's password */}
               <p className="delete-confirm-text">
                 Esta acción es permanente.  
                 <br />Ingrese su contraseña para confirmar:
               </p>
 
-              {/* Input de contraseña */}
+              {/* Password input */}
               <input
                 type="password"
                 className="delete-password-input"
@@ -121,7 +126,7 @@ export default function DeleteAccount() {
                 onChange={(e) => setPassword(e.target.value)}
               />
 
-              {/* Botones de confirmar o cancelar */}
+              {/* Confirm or cancel actions */}
               <div className="delete-confirm-buttons">
                 <button
                   className="btn-confirm-delete"
@@ -149,7 +154,7 @@ export default function DeleteAccount() {
         <div className="footer-divider"></div>
         <h3>Mapa del sitio</h3>
 
-        {/* Enlaces del footer */}
+        {/* Footer links */}
         <div className="footer-columns">
           <div>
             <p><strong>ACCESO</strong></p>
@@ -181,4 +186,5 @@ export default function DeleteAccount() {
     </div>
   );
 }
+
 
