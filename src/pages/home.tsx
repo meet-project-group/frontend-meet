@@ -6,65 +6,86 @@ import { createMeeting } from "../services/meetingService";
 import { getAuth } from "firebase/auth";
 
 const Home = () => {
+  // Controls whether the sidebar menu is open
   const [openMenu, setOpenMenu] = useState(false);
+
+  // Stores the meeting code generated or entered by the user
   const [meetingCode, setMeetingCode] = useState("");
+
+  // Controls the visibility of the modal that appears after creating a meeting
   const [showModal, setShowModal] = useState(false);
+
+  // Indicates whether the meeting code was copied to clipboard
   const [copied, setCopied] = useState(false);
+
+  // Indicates whether the meeting link was shared
   const [shared, setShared] = useState(false);
 
   const navigate = useNavigate();
 
+  // Handles meeting creation using Firebase authentication and backend API
   const handleCreateMeeting = async () => {
     try {
       const auth = getAuth();
       const user = auth.currentUser;
 
-      if (!user) return alert("⚠ Debes iniciar sesión para crear una reunión");
+      // User must be logged in to create a meeting
+      if (!user) return alert("⚠ You must sign in to create a meeting");
 
+      // Get Firebase ID token to authenticate backend request
       const token = await user.getIdToken();
 
+      // Request new meeting creation from backend
       const meeting = await createMeeting(
         user.uid,
-        user.displayName || "Anónimo",
+        user.displayName || "Anonymous",
         token
       );
 
+      // Save meeting ID and open modal
       setMeetingCode(meeting.id);
       setShowModal(true);
       setCopied(false);
       setShared(false);
     } catch (e) {
-      console.error("Error creando reunión:", e);
-      alert("❌ Error creando reunión");
+      console.error("Error creating meeting:", e);
+      alert("❌ Error creating meeting");
     }
   };
 
+  // Copies the meeting code to the user’s clipboard
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(meetingCode);
+
       setCopied(true);
+
+      // Reset copy indicator after 2 seconds
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Error copiando:", err);
-      alert("No se pudo copiar el código");
+      console.error("Copy error:", err);
+      alert("Could not copy the code");
     }
   };
 
+  // Shares the meeting link using Web Share API, WhatsApp, or fallback copy
   const handleShare = async () => {
     const url = `${window.location.origin}/room/${meetingCode}`;
-    const text = `Únete a mi reunión en UVMeet: ${meetingCode}\n${url}`;
+    const text = `Join my meeting on UVMeet: ${meetingCode}\n${url}`;
 
+    // 1️⃣ Try native Web Share API (mobile or supported browsers)
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Reunión UVMeet", text, url });
+        await navigator.share({ title: "UVMeet Meeting", text, url });
         setShared(true);
         setTimeout(() => setShared(false), 2000);
         return;
       } catch (err) {
-        console.warn("Web Share falló o fue cancelado:", err);
+        console.warn("Web Share failed or was canceled:", err);
       }
     }
 
+    // 2️⃣ Try sharing through WhatsApp
     try {
       const whatsapp = `https://wa.me/?text=${encodeURIComponent(text)}`;
       window.open(whatsapp, "_blank");
@@ -72,17 +93,18 @@ const Home = () => {
       setTimeout(() => setShared(false), 2000);
       return;
     } catch (err) {
-      console.warn("No se pudo abrir WhatsApp:", err);
+      console.warn("Could not open WhatsApp:", err);
     }
 
+    // 3️⃣ Fallback: copy link manually
     try {
       await navigator.clipboard.writeText(url);
-      alert("Enlace copiado al portapapeles. Pega y comparte donde quieras.");
+      alert("Link copied to clipboard. Share it anywhere you want.");
       setShared(true);
       setTimeout(() => setShared(false), 2000);
     } catch (err) {
-      console.error("No se pudo copiar el enlace:", err);
-      alert("No se pudo compartir el enlace. Copia manualmente: " + url);
+      console.error("Link copy failed:", err);
+      alert("Could not share the link. Copy manually: " + url);
     }
   };
 
@@ -94,6 +116,7 @@ const Home = () => {
       {/* HEADER */}
       <header className="home-header">
         <div className="header-left">
+          {/* Menu button */}
           <button
             className="hamburger-btn"
             onClick={(e) => {
@@ -104,8 +127,10 @@ const Home = () => {
             ☰
           </button>
 
+          {/* Sidebar menu component */}
           <Menu open={openMenu} setOpen={setOpenMenu} />
 
+          {/* Site logo */}
           <img
             src="/images/uvmeet-removebg-preview.png"
             alt="UVMeet Logo"
@@ -113,108 +138,117 @@ const Home = () => {
           />
         </div>
 
+        {/* Top navigation links */}
         <nav className="navbar">
-          <Link to="/about">sobre nosotros</Link>
-          <Link to="/sitemap">mapa del sitio</Link>
+          <Link to="/about">about us</Link>
+          <Link to="/sitemap">site map</Link>
         </nav>
       </header>
 
       {/* MAIN CONTENT */}
       <main className="home-main">
         <h1 className="main-title">
-          Videoconferencias <br /> seguras para todos
+          Secure <br /> video conferences for everyone
         </h1>
 
         <p className="main-subtitle">
-          conecta y colabora con los que quieras en uv meet
+          connect and collaborate with whoever you want on uv meet
         </p>
 
+        {/* Section for creating or joining a meeting */}
         <div className="action-section">
-          <p className="question">¿Qué deseas hacer?</p>
+          <p className="question">What do you want to do?</p>
 
           <div className="actions">
+            {/* Button to create a new meeting */}
             <button className="create-btn" onClick={handleCreateMeeting}>
-              crear reunión
+              create meeting
             </button>
 
+            {/* Input for joining an existing meeting */}
             <input
               type="text"
-              placeholder="ingrese el código"
+              placeholder="enter the code"
               className="room-input"
               value={meetingCode}
               onChange={(e) => setMeetingCode(e.target.value)}
             />
 
+            {/* Button to join a meeting */}
             <button
               className="join-btn"
               onClick={() => {
                 if (!meetingCode.trim())
-                  return alert("Ingrese un código válido");
+                  return alert("Enter a valid code");
                 navigate(`/room/${meetingCode}`);
               }}
             >
-              unirme
+              join
             </button>
           </div>
         </div>
       </main>
 
-      {/* FOOTER (IGUAL AL DE EDITPROFILE) */}
+      {/* FOOTER */}
       <footer className="home-footer">
         <div className="footer-divider"></div>
-        <h3>Mapa del sitio</h3>
+        <h3>Site map</h3>
 
         <div className="footer-columns">
           <div>
-            <p><strong>ACCESO</strong></p>
-            <p>Iniciar Sesión</p>
-            <p>Crear cuenta</p>
-            <p>Recuperar contraseña</p>
+            <p><strong>ACCESS</strong></p>
+            <p>Sign in</p>
+            <p>Create account</p>
+            <p>Recover password</p>
           </div>
 
           <div>
-            <p><strong>CUENTA Y SOPORTE</strong></p>
-            <p>Editar perfil</p>
-            <p>Sobre nosotros</p>
-            <p>Contacto</p>
+            <p><strong>ACCOUNT & SUPPORT</strong></p>
+            <p>Edit profile</p>
+            <p>About us</p>
+            <p>Contact</p>
           </div>
 
           <div>
-            <p><strong>NAVEGACIÓN</strong></p>
-            <p>Inicio</p>
-            <p>Sobre nosotros</p>
-            <p>Reuniones</p>
+            <p><strong>NAVIGATION</strong></p>
+            <p>Home</p>
+            <p>About us</p>
+            <p>Meetings</p>
           </div>
 
           <div>
-            <p><strong>CONTACTO</strong></p>
+            <p><strong>CONTACT</strong></p>
             <p>uvmeet@gmail.com</p>
           </div>
         </div>
       </footer>
 
-      {/* MODAL */}
+      {/* MODAL (Shown after meeting creation) */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">Reunión creada</h2>
+            <h2 className="modal-title">Meeting created</h2>
 
-            <p className="modal-subtitle">Este es tu código de acceso:</p>
+            <p className="modal-subtitle">This is your access code:</p>
 
+            {/* Box containing the meeting code */}
             <div className="code-box">
               <span className="code">{meetingCode}</span>
 
+              {/* Button to copy the code */}
               <button className="copy-btn" onClick={copyCode}>
-                {copied ? "✓ Copiado" : "Copiar"}
+                {copied ? "✓ Copied" : "Copy"}
               </button>
             </div>
 
+            {/* Button to share the meeting */}
             <button className="share-btn" onClick={handleShare}>
-              {shared ? "✓ Compartido" : "Compartir"}
+              {shared ? "✓ Shared" : "Share"}
             </button>
 
+            {/* Close modal */}
             <button className="close-btn" onClick={() => setShowModal(false)}>
-              Cerrar
+              Close
             </button>
           </div>
         </div>
