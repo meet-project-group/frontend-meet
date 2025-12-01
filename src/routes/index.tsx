@@ -11,15 +11,26 @@ import EditProfile from "../pages/editprofile";
 import DeleteAccount from "../pages/deleteaccount";
 import Sitemap from "../pages/sitemap";
 
+/**
+ * AppRoutes Component
+ * --------------------
+ * This component defines all the routes of the application using React Router.
+ * It includes:
+ *  - Public routes (login, register, etc.)
+ *  - Protected routes (home, room, profile settings), wrapped inside <ProtectedRoute>
+ *  - Redirect from root ("/") to the login page
+ *
+ * ProtectedRoute ensures that only authenticated users can access protected pages.
+ */
 export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* ⭐ Ruta raíz -> redirigir SIEMPRE al login */}
+        {/* ⭐ Root route -> always redirect user to the login page */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Rutas públicas */}
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/resetpassword" element={<RessetPasword />} />
         <Route path="/forgot" element={<Forgot />} />
@@ -27,7 +38,7 @@ export default function AppRoutes() {
         <Route path="/about" element={<About />} />
         <Route path="/sitemap" element={<Sitemap />} />
 
-        {/* Rutas protegidas */}
+        {/* Protected routes: only accessible if the user is authenticated */}
         <Route
           path="/home"
           element={
