@@ -4,7 +4,7 @@ import { createMeeting, listMeetings, deleteMeeting } from "../services/meetingS
 export default function Meetings({ user, token }) {
   const [meetings, setMeetings] = useState([]);
 
-  // Crear reunión
+  // Creates a new meeting for the current user
   const generate = async () => {
     try {
       const res = await createMeeting(
@@ -15,14 +15,14 @@ export default function Meetings({ user, token }) {
 
       alert(`Reunión creada con ID: ${res.id}`);
 
-      load(); // recargar lista
+      load(); // reload meeting list
     } catch (e) {
       console.error(e);
       alert("Error al crear reunión");
     }
   };
 
-  // Cargar reuniones del usuario
+  // Loads all meetings created by the current user
   const load = async () => {
     try {
       const res = await listMeetings(user.uid, token);
@@ -32,12 +32,13 @@ export default function Meetings({ user, token }) {
     }
   };
 
-  // Eliminar reunión
+  // Deletes a meeting and refreshes the list
   const removeMeet = async (id) => {
     await deleteMeeting(id, token);
     load();
   };
 
+  // Load meetings when component mounts
   useEffect(() => {
     load();
   }, []);
@@ -46,13 +47,16 @@ export default function Meetings({ user, token }) {
     <div style={{ padding: 20 }}>
       <h1>🔵 Mis Reuniones</h1>
 
+      {/* Button to create a new meeting */}
       <button onClick={generate}>➕ Crear Reunión</button>
 
+      {/* List of user's meetings */}
       <ul>
         {meetings.map((m) => (
           <li key={m.id} style={{ marginTop: 10 }}>
             <b>{m.id}</b> — {m.hostName}
             
+            {/* Link to enter the meeting */}
             <a
               href={`/room/${m.id}`}
               style={{ marginLeft: 10, color: "blue" }}
@@ -60,6 +64,7 @@ export default function Meetings({ user, token }) {
               Entrar
             </a>
 
+            {/* Button to delete the meeting */}
             <button
               style={{ marginLeft: 10 }}
               onClick={() => removeMeet(m.id)}
