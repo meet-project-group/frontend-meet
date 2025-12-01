@@ -35,7 +35,7 @@ export default function Register(): JSX.Element {
     <div className="register-container">
       <div className="register-left">
         <img
-          src="/public/images/uvmeet-removebg-preview.png"
+          src="/images/uvmeet-removebg-preview.png"
           alt="UVMeet Logo"
           className="register-logo"
         />
