@@ -21,22 +21,25 @@ interface ChatMessage {
 }
 
 export default function Room() {
+  // Read the room ID from URL params
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Local media controls state
   const [muted, setMuted] = useState(false);
   const [camera, setCamera] = useState(true);
   const [hand, setHand] = useState(false);
   const [sharing, setSharing] = useState(false);
 
-  // CHAT
+  // CHAT UI & logic
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState("");
 
+  // Panel reference for detecting clicks outside
   const chatRef = useRef<HTMLDivElement | null>(null);
 
-  // 🚀 Obtener nombre real del usuario
+  // Retrieve Firebase user to display real username
   const auth = getAuth();
   const user = auth.currentUser;
   const username =
@@ -44,20 +47,23 @@ export default function Room() {
     user?.email?.split("@")[0] ||
     "Anónimo";
 
-  // JOIN ROOM + escuchar mensajes
+  // Join the socket room and listen for incoming chat messages
   useEffect(() => {
+    // Notify socket server of room join
     socket.emit("join_room", id, username);
 
+    // Subscribe to incoming messages
     socket.on("receive_message", (data: ChatMessage) => {
       setMessages((prev) => [...prev, data]);
     });
 
+    // Cleanup listener when component unmounts
     return () => {
       socket.off("receive_message");
     };
   }, [id, username]);
 
-  // Cerrar chat si haces clic fuera
+  // Close chat panel when clicking outside of it
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (chatOpen && chatRef.current && !chatRef.current.contains(e.target as Node)) {
@@ -69,7 +75,7 @@ export default function Room() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [chatOpen]);
 
-  // Enviar mensaje
+  // Send chat message through socket
   const sendMessage = () => {
     if (!message.trim()) return;
 
@@ -79,15 +85,17 @@ export default function Room() {
       time: Date.now(),
     };
 
+    // Emit the chat message to the socket server
     socket.emit("send_message", {
       roomId: id,
       ...msg,
     });
 
+    // Clear input field
     setMessage("");
   };
 
-  /** Fake participants */
+  /** Fake participants shown as placeholders */
   const participants = useMemo(
     () =>
       Array.from({ length: 8 }, (_, i) => ({
@@ -101,12 +109,15 @@ export default function Room() {
     <main className="room" role="main">
       
       <section className="room__main">
+        {/* Display current meeting ID */}
         <h2 className="room__title">Meeting: {id}</h2>
 
+        {/* Main avatar for user preview */}
         <div className="room__main-avatar">
           <img src="/images/chat.png" alt="Your avatar" />
         </div>
 
+        {/* Call controls: mic, camera, screen share, raise hand, hang up */}
         <div className="room__controls">
 
           <button
@@ -139,6 +150,7 @@ export default function Room() {
             </span>
           </button>
 
+          {/* Leave meeting */}
           <button
             className="room__btn room__btn--hangup"
             onClick={() => navigate("/home")}
@@ -148,6 +160,7 @@ export default function Room() {
         </div>
       </section>
 
+      {/* Grid of fake participants */}
       <aside className="room__grid">
         {participants.map((p) => (
           <div key={p.id} className="room__grid-item">
@@ -156,6 +169,7 @@ export default function Room() {
         ))}
       </aside>
 
+      {/* Button to toggle chat panel */}
       <button 
         className="room__chat-button"
         onClick={() => setChatOpen(!chatOpen)}
@@ -163,9 +177,11 @@ export default function Room() {
         <img src="/images/chat.png" alt="Chat icon" />
       </button>
 
+      {/* Chat panel */}
       {chatOpen && (
         <div className="room__chat-panel" ref={chatRef}>
           
+          {/* Chat messages list */}
           <div className="room__chat-messages">
             {messages.map((m, i) => (
               <p key={i}>
@@ -175,6 +191,7 @@ export default function Room() {
             ))}
           </div>
 
+          {/* Message input + send button */}
           <div className="room__chat-input">
             <input 
               type="text"
