@@ -5,11 +5,23 @@ import { useAuth } from "../components/AuthProvider";
 import { auth } from "../firebase";
 import { updateProfile, updateEmail, reload } from "firebase/auth";
 
+/**
+ * EditProfile Component
+ *
+ * This component allows authenticated users to update their personal information.
+ * It performs updates in three layers:
+ * 1. Firebase Authentication (displayName and email)
+ * 2. Backend server (custom user fields)
+ * 3. Local user state (front-end global context)
+ */
 export default function EditProfile() {
+  // Access global authentication context
   const { user, token, setUser } = useAuth();
 
+  // Control the visibility of the side menu
   const [openMenu, setOpenMenu] = useState(false);
 
+  // Local form state for the editable user fields
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -19,7 +31,10 @@ export default function EditProfile() {
 
   console.log("USER DESDE AUTH:", user);
 
-  // Cargar datos actuales del usuario
+  /**
+   * Load user data into the form when the component mounts
+   * or when the global user object changes.
+   */
   useEffect(() => {
     if (user) {
       setForm({
@@ -31,10 +46,22 @@ export default function EditProfile() {
     }
   }, [user]);
 
+  /**
+   * Handles input changes for every field in the form.
+   */
   function handleChange(e: any) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
+  /**
+   * Submits the profile updates.
+   * Steps:
+   * 1. Validate the user session
+   * 2. Update Firebase Auth (displayName + email)
+   * 3. Refresh Firebase user data
+   * 4. Update backend user document
+   * 5. Update global front-end user state
+   */
   async function handleSubmit(e: any) {
     e.preventDefault();
     console.log("USUARIO EN EDITPROFILE:", user);
@@ -52,19 +79,20 @@ export default function EditProfile() {
     }
 
     try {
-      // 1️⃣ Actualizar Firebase Auth
+      // 1️⃣ Update Firebase Authentication profile
       await updateProfile(currentAuthUser, {
         displayName: `${form.firstName} ${form.lastName}`,
       });
 
+      // Update email only if the user changed it
       if (form.email !== currentAuthUser.email) {
         await updateEmail(currentAuthUser, form.email);
       }
 
-      // Refrescar datos de Firebase
+      // Refresh Firebase user data
       await reload(currentAuthUser);
 
-      // 2️⃣ Actualizar backend
+      // 2️⃣ Update backend user record
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/users/${user.uid}`,
         {
@@ -85,7 +113,7 @@ export default function EditProfile() {
         return;
       }
 
-      // 3️⃣ Actualizar usuario global (frontend)
+      // 3️⃣ Update the global user state (frontend context)
       setUser({
         ...user,
         firstName: form.firstName,
@@ -106,6 +134,7 @@ export default function EditProfile() {
       {/* HEADER */}
       <header className="edit-header">
         <div className="header-left">
+          {/* Button to toggle the side menu */}
           <button
             className="btn-menu"
             onClick={(e) => {
@@ -116,8 +145,10 @@ export default function EditProfile() {
             ☰
           </button>
 
+          {/* Slide-out menu */}
           <Menu open={openMenu} setOpen={setOpenMenu} />
 
+          {/* App logo */}
           <img
             src="/images/uvmeet-removebg-preview.png"
             alt="UVMeet Logo"
@@ -126,9 +157,10 @@ export default function EditProfile() {
         </div>
       </header>
 
-      {/* FORM */}
+      {/* FORM SECTION */}
       <div className="edit-profile-container">
         <div className="edit-card">
+          {/* Static profile picture placeholder */}
           <div className="profile-photo">
             <div className="circle">
               <span className="icon">👤</span>
@@ -136,10 +168,12 @@ export default function EditProfile() {
             <button className="btn-edit-photo">Editar foto</button>
           </div>
 
+          {/* Display the user's first name */}
           <div className="username-section">
             <h2 className="username">{form.firstName || "Usuario"}</h2>
           </div>
 
+          {/* Form for updating user information */}
           <form onSubmit={handleSubmit} className="edit-form">
             <label>Nombre</label>
             <input
@@ -173,6 +207,7 @@ export default function EditProfile() {
               onChange={handleChange}
             />
 
+            {/* Submit button */}
             <button type="submit" className="btn-save">
               Guadar
             </button>
