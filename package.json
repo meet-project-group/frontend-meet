@@ -19,8 +19,6 @@
     "react-router-dom": "^7.10.0",
     "sass": "^1.94.2",
     "socket.io-client": "^4.8.1",
-
-    // 🔥 MOVIDOS DESDE DEVDEPENDENCIES (NECESARIOS EN VERCEL)
     "@types/node": "^24.10.1",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
