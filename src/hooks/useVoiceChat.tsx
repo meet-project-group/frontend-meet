@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import Peer, { MediaConnection } from "peerjs";
+import { useState, useEffect, useRef } from "react";
+
+import Peer from "peerjs";
+import type { MediaConnection } from "peerjs";
 
 import { voiceSocket } from "../services/voiceSocket";
+
 
 export interface Participant {
   peerId: string;
