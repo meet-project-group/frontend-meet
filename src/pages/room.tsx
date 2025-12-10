@@ -108,13 +108,13 @@ export default function Room() {
   const [hand, setHand] = useState(false);
   const [sharing, setSharing] = useState(false);
 
-  /* ------------------- VOICE HOOK (AQUÍ SE CONECTA TODO) ------------------- */
+  /* ------------------- VOICE HOOK ------------------- */
   const {
     myStream,
     isTalking,
     participants,
     endCall,
-    peerRef
+    peerRef,
   } = useVoiceChat(id!, username);
 
   /* ------------------- UI ------------------- */
@@ -133,7 +133,9 @@ export default function Room() {
             className="room__btn"
             onClick={() => {
               setMuted(!muted);
-              myStream?.getAudioTracks().forEach((t) => (t.enabled = !t.enabled));
+              myStream?.getAudioTracks().forEach(
+                (t) => (t.enabled = !t.enabled)
+              );
             }}
           >
             {muted ? <MicOff /> : <Mic />}
@@ -157,10 +159,13 @@ export default function Room() {
           </button>
 
           {/* END CALL */}
-          <button className="room__btn room__btn--hangup" onClick={() => {
-            endCall();
-            navigate("/home");
-          }}>
+          <button
+            className="room__btn room__btn--hangup"
+            onClick={() => {
+              endCall();
+              navigate("/home");
+            }}
+          >
             End
           </button>
         </div>
@@ -174,7 +179,6 @@ export default function Room() {
             <div className={`initial-badge ${isTalking ? "talking" : ""}`}>
               {username.charAt(0).toUpperCase()}
             </div>
-
             <div className="mic-status">
               {isTalking ? <Mic /> : <MicOff />}
             </div>
@@ -183,14 +187,15 @@ export default function Room() {
 
         {/* OTROS */}
         {participants
-          .filter((u) => u.peerId !== peerRef.current?.id)
+          .filter(
+            (u) => u.peerId !== peerRef.current?.id // evita mostrarme 2 veces
+          )
           .map((u) => (
             <div key={u.peerId} className="room__grid-item">
               <div className="room__small-avatar">
                 <div className={`initial-badge ${u.talking ? "talking" : ""}`}>
                   {u.username.charAt(0).toUpperCase()}
                 </div>
-
                 <div className="mic-status">
                   {u.talking ? <Mic /> : <MicOff />}
                 </div>
