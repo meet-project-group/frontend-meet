@@ -1,0 +1,282 @@
+.room
+  display: grid
+  grid-template-columns: 1fr 320px
+  height: 100vh
+  background: #000
+  position: relative
+  color: #fff
+  overflow: hidden
+
+// LEFT SIDE
+.room__main
+  display: flex
+  flex-direction: column
+  justify-content: space-between
+  padding: 16px
+
+.room__title
+  font-size: 1.4rem
+  margin-bottom: 12px
+  font-weight: 600
+
+.room__main-avatar
+  flex: 1
+  background: #000
+  display: flex
+  justify-content: center
+  align-items: center
+  border-radius: 4px
+
+  img
+    width: 180px
+    height: 180px
+    border-radius: 50%
+    background: #472b9f
+    object-fit: cover
+
+// ─────────────────────────────
+// CONTROLS
+// ─────────────────────────────
+.room__controls
+  display: flex
+  gap: 12px
+  justify-content: center
+  padding: 12px
+
+.room__btn
+  background: #222
+  border: none
+  color: #fff
+  padding: 10px 16px
+  font-size: .9rem
+  border-radius: 8px
+  cursor: pointer
+  transition: .15s ease
+  display: flex
+  align-items: center
+  justify-content: center
+
+  &:hover
+    background: #333
+
+.room__btn--hangup
+  background: #d62828 !important
+
+  &:hover
+    background: #b71f1f !important
+
+// ───────────────────────────────
+// PARTICIPANTS GRID
+// ───────────────────────────────
+.room__grid
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))
+  gap: 20px
+  padding: 18px
+  background: #000
+  overflow-y: auto
+  height: 100%
+  border-left: 1px solid #111
+
+  scrollbar-width: thin
+  scrollbar-color: #4c2bc9 #000
+
+.room__grid-item
+  background: #0d0d0d
+  border-radius: 12px
+  display: flex
+  flex-direction: column
+  justify-content: flex-start
+  align-items: center
+  padding: 18px 10px
+  text-align: center
+  border: 1px solid #1b1b1b
+  transition: .2s ease
+  min-height: 160px
+  position: relative
+
+  &:hover
+    border-color: #4c2bc9
+    box-shadow: 0 0 12px rgba(76,43,201,0.25)
+
+  // 🔊 Glow cuando el usuario está hablando
+  &.is-speaking
+    border-color: #7d5bff
+    box-shadow: 0 0 16px rgba(125,91,255,0.65)
+
+.room__small-avatar
+  width: 60px
+  height: 60px
+  background: #4c2bc9
+  border-radius: 50%
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  font-size: 20px
+  font-weight: bold
+  color: #fff
+  margin-bottom: 10px
+  box-shadow: 0 0 8px rgba(76,43,201,0.35)
+  transition: .2s ease
+  position: relative
+
+  &:hover
+    transform: scale(1.05)
+
+  // 🔇 Icono mic muteado
+  &.is-muted::after
+    content: "🔇"
+    position: absolute
+    bottom: -6px
+    right: -6px
+    background: #d62828
+    width: 20px
+    height: 20px
+    display: flex
+    align-items: center
+    justify-content: center
+    font-size: 12px
+    border-radius: 50%
+    box-shadow: 0 0 6px rgba(214,40,40,0.6)
+
+.room__grid-item strong
+  display: block
+  font-size: 0.95rem
+  margin-top: 6px
+  color: #ffffff
+  font-weight: 600
+
+.room__grid-item small
+  font-size: 0.75rem
+  margin-top: 2px
+  color: #bcbcbc
+  opacity: 0.8
+
+// ─────────────────────────────
+// FLOATING CHAT BUTTON
+// ─────────────────────────────
+.room__chat-button
+  position: absolute
+  bottom: 20px
+  right: 20px
+  width: 52px
+  height: 52px
+  background: #4c2bc9
+  border-radius: 50%
+  border: none
+  cursor: pointer
+  display: flex
+  align-items: center
+  justify-content: center
+  z-index: 30
+  transition: .2s ease
+
+  img
+    width: 28px
+    height: 28px
+
+  &:hover
+    background: #6140e6
+
+// ─────────────────────────────
+// CHAT PANEL
+// ─────────────────────────────
+.room__chat-panel
+  position: absolute
+  top: 0
+  right: 0
+  width: 320px
+  height: 100%
+  background: #0d0d0d
+  border-left: 1px solid #222
+  display: flex
+  flex-direction: column
+  padding: 12px
+  z-index: 50
+  animation: slideIn .25s ease-out
+  pointer-events: auto
+
+.room__chat-messages
+  flex: 1
+  overflow-y: auto
+  padding-right: 4px
+
+  p
+    background: #1a1a1a
+    padding: 8px 10px
+    border-radius: 6px
+    margin-bottom: 8px
+    font-size: .9rem
+    line-height: 1.3
+
+    strong
+      color: #7d5bff
+
+.room__chat-input
+  display: flex
+  gap: 8px
+  margin-top: 12px
+
+  input
+    flex: 1
+    background: #111
+    border: 1px solid #333
+    border-radius: 6px
+    padding: 8px 10px
+    color: white
+    font-size: .9rem
+    outline: none
+
+    &:focus
+      border-color: #6a4df4
+
+  button
+    background: #4c2bc9
+    border: none
+    padding: 8px 14px
+    border-radius: 6px
+    cursor: pointer
+    color: white
+    font-weight: bold
+
+    &:hover
+      background: #6a4df4
+
+@keyframes slideIn
+  from
+    transform: translateX(100%)
+  to
+    transform: translateX(0)
+
+
+// ─────────────────────────────
+// OVERLAY PARA CERRAR EN CELULAR
+// ─────────────────────────────
+.chat-overlay
+  position: fixed
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  background: rgba(0,0,0,0)
+  z-index: 40
+
+// ─────────────────────────────
+// RESPONSIVE FIX
+// ─────────────────────────────
+@media (max-width: 900px)
+  .room
+    grid-template-columns: 1fr
+
+  .room__grid
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))
+
+  .room__chat-panel
+    width: 280px !important
+    position: fixed
+    right: 0
+    top: 0
+    height: 100%
+    z-index: 50
+
