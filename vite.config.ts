@@ -6,5 +6,8 @@ export default defineConfig({
   server: {
     open: true,
   },
-  base: "/",   // ⬅️ CAMBIA ESTO
+  base: "./",
+  optimizeDeps: {
+    include: ["peerjs"], // ← ESTO ES LO IMPORTANTE
+  },
 });
