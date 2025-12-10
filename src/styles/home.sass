@@ -280,3 +280,76 @@ $overlay: rgba(0, 0, 0, 0.45)
   line-height: 2rem
   color: #333
   opacity: .85
+
+
+/* ===== RESPONSIVE PARA CELULARES ===== */
+@media (max-width: 520px)
+
+  /* Header CORREGIDO */
+  .home-header
+    padding: 1rem
+    flex-direction: row
+    justify-content: space-between
+    align-items: center
+
+  .logo
+    height: 48px
+
+  .navbar
+    gap: 1rem
+    flex-wrap: wrap
+    justify-content: center
+
+  .navbar a
+    font-size: .85rem
+
+  /* MAIN */
+  .home-main
+    padding: 2rem 1rem
+
+  .main-title
+    font-size: 2rem
+    padding: 0 1rem
+    line-height: 1.2
+
+  .main-subtitle
+    font-size: .95rem
+    padding: 0 1rem
+
+  /* ACCIONES */
+  .actions
+    flex-direction: column
+    gap: .8rem
+
+  .create-btn,
+  .join-btn,
+  .room-input
+    width: 100%
+    max-width: 320px
+    font-size: 1rem
+
+  .room-input
+    text-align: center
+
+  /* FOOTER */
+  .footer-columns
+    flex-direction: column
+    gap: 1.5rem
+    text-align: center
+
+  .footer-columns div p
+    font-size: .95rem
+
+  /* MODAL */
+  .modal
+    width: 92%
+    padding: 1.2rem
+
+  .code-box
+    flex-direction: column
+    gap: .6rem
+
+  .code
+    font-size: 1.15rem
+
+
