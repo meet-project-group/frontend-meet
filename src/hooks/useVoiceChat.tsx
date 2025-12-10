@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import Peer from "peerjs";
+import Peer, { MediaConnection } from "peerjs";
+
 import { voiceSocket } from "../services/voiceSocket";
 
 export interface Participant {
@@ -13,10 +14,12 @@ export function useVoiceChat(roomId: string, username: string) {
   const [isTalking, setIsTalking] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]);
 
-  const peers = useRef<{ [key: string]: any }>({});
-  const peerRef = useRef<any>(null);
+  const peerRef = useRef<Peer | null>(null);
+  const peers = useRef<Record<string, MediaConnection>>({});
 
-  /* -------------------- INITIALIZE AUDIO + PEER -------------------- */
+  /* ============================================================
+      INITIALIZE MICROPHONE + PEERJS + SOCKET.IO
+  ============================================================ */
   useEffect(() => {
     let cancelled = false;
 
@@ -24,10 +27,9 @@ export function useVoiceChat(roomId: string, username: string) {
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       if (cancelled) return;
-
       setMyStream(stream);
 
-      /* --- Detect my voice --- */
+      /* ---- ANALYZER: detect my voice ---- */
       const ctx = new AudioContext();
       const analyser = ctx.createAnalyser();
       const src = ctx.createMediaStreamSource(stream);
@@ -45,7 +47,9 @@ export function useVoiceChat(roomId: string, username: string) {
 
       detectMyVoice();
 
-      /* -------------------- Initialize PeerJS -------------------- */
+      /* ============================================================
+          INIT PEERJS CLIENT
+      ============================================================ */
       if (!peerRef.current) {
         const peer = new Peer({
           host: import.meta.env.VITE_PEER_HOST,
@@ -62,7 +66,7 @@ export function useVoiceChat(roomId: string, username: string) {
 
         peerRef.current = peer;
 
-        peer.on("open", (peerId) => {
+        peer.on("open", (peerId: string) => {
           voiceSocket.emit("join-voice-room", {
             roomId,
             peerId,
@@ -70,11 +74,11 @@ export function useVoiceChat(roomId: string, username: string) {
           });
         });
 
-        /* --- Incoming call --- */
-        peer.on("call", (call) => {
+        /* ---- Incoming Call ---- */
+        peer.on("call", (call: MediaConnection) => {
           call.answer(stream);
 
-          call.on("stream", (userStream) => {
+          call.on("stream", (userStream: MediaStream) => {
             addAudio(userStream, call.peer);
           });
 
@@ -82,31 +86,42 @@ export function useVoiceChat(roomId: string, username: string) {
         });
       }
 
-      /* -------------------- Socket events -------------------- */
+      /* ============================================================
+          SOCKET EVENTS
+      ============================================================ */
+
       voiceSocket.on("voice-room-users", (users: Participant[]) => {
         setParticipants(users);
       });
 
-      const handleConnect = (data: Participant) => {
+      const handleUserConnected = (data: Participant) => {
         setParticipants((prev) => [...prev, data]);
-        setTimeout(() => connectToNewUser(data.peerId, stream), 400);
+
+        setTimeout(() => {
+          connectToNewUser(data.peerId, stream);
+        }, 400);
       };
 
-      const handleDisconnect = (peerId: string) => {
+      const handleUserDisconnected = (peerId: string) => {
         setParticipants((prev) => prev.filter((p) => p.peerId !== peerId));
-        if (peers.current[peerId]) peers.current[peerId].close();
-        delete peers.current[peerId];
+
+        if (peers.current[peerId]) {
+          peers.current[peerId].close();
+          delete peers.current[peerId];
+        }
       };
 
-      voiceSocket.on("user-connected", handleConnect);
-      voiceSocket.on("user-disconnected", handleDisconnect);
+      voiceSocket.on("user-connected", handleUserConnected);
+      voiceSocket.on("user-disconnected", handleUserDisconnected);
 
-      /* -------------------- CLEANUP -------------------- */
+      /* ============================================================
+          CLEANUP
+      ============================================================ */
       return () => {
         cancelled = true;
 
-        voiceSocket.off("user-connected", handleConnect);
-        voiceSocket.off("user-disconnected", handleDisconnect);
+        voiceSocket.off("user-connected", handleUserConnected);
+        voiceSocket.off("user-disconnected", handleUserDisconnected);
 
         Object.values(peers.current).forEach((c) => c.close());
         peers.current = {};
@@ -121,12 +136,14 @@ export function useVoiceChat(roomId: string, username: string) {
     });
   }, []);
 
-  /* -------------------- CONNECT TO NEW USER -------------------- */
+  /* ============================================================
+      CONNECT TO NEW USER (Outgoing call)
+  ============================================================ */
   const connectToNewUser = (peerId: string, streamOverride?: MediaStream) => {
     const stream = streamOverride || myStream;
     if (!stream || !peerRef.current) return;
 
-    const call = peerRef.current.call(peerId, stream);
+    const call: MediaConnection = peerRef.current.call(peerId, stream);
 
     call.on("stream", (userStream: MediaStream) => {
       addAudio(userStream, call.peer);
@@ -135,7 +152,9 @@ export function useVoiceChat(roomId: string, username: string) {
     peers.current[peerId] = call;
   };
 
-  /* -------------------- ADD AUDIO STREAM -------------------- */
+  /* ============================================================
+      ADD INCOMING AUDIO STREAM + DETECT VOICE
+  ============================================================ */
   const addAudio = (stream: MediaStream, peerId?: string) => {
     const audio = document.createElement("audio");
     audio.srcObject = stream;
@@ -168,7 +187,9 @@ export function useVoiceChat(roomId: string, username: string) {
     detectVoice();
   };
 
-  /* -------------------- END CALL -------------------- */
+  /* ============================================================
+      END CALL
+  ============================================================ */
   const endCall = () => {
     if (myStream) myStream.getTracks().forEach((t) => t.stop());
 
