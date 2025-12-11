@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-export const socket = io(import.meta.env.VITE_CHAT_SERVER_URL, {
-  transports: ["websocket"],
-  autoConnect: true,
+export const socket = io("https://backend-chat-meet.onrender.com", {
+  autoConnect: true
 });
+
