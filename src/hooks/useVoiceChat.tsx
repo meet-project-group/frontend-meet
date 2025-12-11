@@ -211,37 +211,45 @@ export function useVoiceChat(roomId: string, username: string) {
   };
 
   /* -------------------- ADD AUDIO STREAM -------------------- */
-  const addAudio = (stream: MediaStream, peerId?: string) => {
-    const audio = document.createElement("audio");
-    audio.srcObject = stream;
-    audio.autoplay = true;
+  /* -------------------- ADD AUDIO STREAM -------------------- */
+const addAudio = (stream: MediaStream, peerId?: string) => {
+  const audio = document.createElement("audio");
+  audio.srcObject = stream;
+  audio.autoplay = true;
 
-    if (!peerId) return;
+  // 🔥 FIX obligatorio para Chrome Android / iOS
+ (audio as any).playsInline = true;                   // iOS modern
+  audio.setAttribute("playsinline", "true");      // iOS legacy
+  audio.setAttribute("webkit-playsinline", "true"); // iPhone WebKit
+  audio.muted = false;                            // evitar bloqueos
 
-    const ctx = new AudioContext();
-    const analyser = ctx.createAnalyser();
-    const src = ctx.createMediaStreamSource(stream);
+  if (!peerId) return;
 
-    analyser.fftSize = 256;
-    src.connect(analyser);
+  const ctx = new AudioContext();
+  const analyser = ctx.createAnalyser();
+  const src = ctx.createMediaStreamSource(stream);
 
-    const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.fftSize = 256;
+  src.connect(analyser);
 
-    const detectVoice = () => {
-      analyser.getByteFrequencyData(data);
-      const volume = data.reduce((a, b) => a + b, 0) / data.length;
+  const data = new Uint8Array(analyser.frequencyBinCount);
 
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.peerId === peerId ? { ...p, talking: volume > 20 } : p
-        )
-      );
+  const detectVoice = () => {
+    analyser.getByteFrequencyData(data);
+    const volume = data.reduce((a, b) => a + b, 0) / data.length;
 
-      requestAnimationFrame(detectVoice);
-    };
+    setParticipants((prev) =>
+      prev.map((p) =>
+        p.peerId === peerId ? { ...p, talking: volume > 20 } : p
+      )
+    );
 
-    detectVoice();
+    requestAnimationFrame(detectVoice);
   };
+
+  detectVoice();
+};
+
 
   /* -------------------- END CALL -------------------- */
   const endCall = () => {
