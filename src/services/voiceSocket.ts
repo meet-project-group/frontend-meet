@@ -1,8 +1,7 @@
+import { io } from "socket.io-client";
+
 export const voiceSocket = io(import.meta.env.VITE_VOICE_SERVER_URL, {
+  autoConnect: false,
+  transports: ["websocket"],
   path: "/voice/socket.io",
-  transports: ["polling", "websocket"],
-  upgrade: true,
-  secure: true,
-  reconnection: true,
-  withCredentials: false
 });
