@@ -8,6 +8,6 @@ export default defineConfig({
   },
   base: "./",
   optimizeDeps: {
-    include: ["peerjs"], // ← ESTO ES LO IMPORTANTE
+    include: ["peerjs", "socket.io-client"], // ← AGREGA socket.io-client
   },
 });
