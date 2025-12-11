@@ -20,7 +20,10 @@ export function useVoiceChat(roomId: string, username: string) {
   useEffect(() => {
     let cancelled = false;
 
-    if (!voiceSocket.connected) voiceSocket.connect();
+    // Always connect to voice socket with Vercel ENV
+    if (!voiceSocket.connected) {
+      voiceSocket.connect();
+    }
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       if (cancelled) return;
@@ -48,13 +51,14 @@ export function useVoiceChat(roomId: string, username: string) {
       /* -------------------- Initialize PeerJS -------------------- */
       if (!peerRef.current) {
         const peer = new Peer({
-          host: "backend-voice-meet-1.onrender.com",
-          port: 443,
-          secure: true,
-          path: "/peerjs",
+          host: import.meta.env.VITE_PEER_HOST,
+          port: Number(import.meta.env.VITE_PEER_PORT),
+          secure: import.meta.env.VITE_PEER_SECURE === "true",
+          path: import.meta.env.VITE_PEER_PATH,
           config: {
             iceServers: [
-              { urls: ["stun:stun.l.google.com:19302"] }
+              { urls: [import.meta.env.VITE_STUN] },
+              { urls: [import.meta.env.VITE_ICE] },
             ],
           },
         });
