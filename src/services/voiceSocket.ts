@@ -1,5 +1,8 @@
 import { io } from "socket.io-client";
 
-export const voiceSocket = io(import.meta.env.VITE_VOICE_SERVER_URL, {
+export const voiceSocket = io("https://backend-voice-meet.onrender.com", {
+  path: "/voice/socket.io",
   transports: ["websocket"],
+  secure: true,
+  reconnection: true,
 });
