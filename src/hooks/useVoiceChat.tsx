@@ -16,14 +16,19 @@ export function useVoiceChat(roomId: string, username: string) {
   const peers = useRef<{ [key: string]: any }>({});
   const peerRef = useRef<any>(null);
 
-  /* -------------------- INITIALIZE AUDIO + PEER -------------------- */
   useEffect(() => {
     let cancelled = false;
+    let socketReady = false;
 
-    // Always connect to voice socket with Vercel ENV
+    // Ensure socket is connected and set a flag when it is
     if (!voiceSocket.connected) {
       voiceSocket.connect();
     }
+    const onSocketConnect = () => {
+      socketReady = true;
+      console.debug("[voiceSocket] connected (useVoiceChat)");
+    };
+    voiceSocket.on("connect", onSocketConnect);
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       if (cancelled) return;
@@ -65,12 +70,41 @@ export function useVoiceChat(roomId: string, username: string) {
 
         peerRef.current = peer;
 
+        // Wait for peer open. But only emit join when socket is ready.
         peer.on("open", (peerId) => {
-          voiceSocket.emit("join-voice-room", {
-            roomId,
-            peerId,
-            username,
-          });
+          console.debug("[peer] open", peerId);
+          // If socket is already connected, emit immediately; otherwise wait for socket connect
+          if (socketReady || voiceSocket.connected) {
+            voiceSocket.emit("join-voice-room", {
+              roomId,
+              peerId,
+              username,
+            });
+          } else {
+            // CHK: wait for socket to connect before emitting join
+            const tryEmit = () => {
+              if (voiceSocket.connected) {
+                voiceSocket.emit("join-voice-room", {
+                  roomId,
+                  peerId,
+                  username,
+                });
+                voiceSocket.off("connect", tryEmit);
+              }
+            };
+            voiceSocket.on("connect", tryEmit);
+            // safety: after 2s, if still not connected, try emit anyway (prevents stuck)
+            setTimeout(() => {
+              if (peerRef.current && !voiceSocket.connected) {
+                console.warn("[useVoiceChat] socket still not connected after 2s, emitting join anyway");
+                voiceSocket.emit("join-voice-room", {
+                  roomId,
+                  peerId,
+                  username,
+                });
+              }
+            }, 2000);
+          }
         });
 
         /* --- Incoming call --- */
@@ -86,16 +120,40 @@ export function useVoiceChat(roomId: string, username: string) {
       }
 
       /* -------------------- Socket events -------------------- */
+
+      // When we receive the full list of users in the room (sent only to the new user)
       voiceSocket.on("voice-room-users", (users: Participant[]) => {
+        console.debug("[voice-room-users] received", users);
         setParticipants(users);
+
+        // CHK: Actively try to call existing users (helps when the peerConnected event race happens)
+        // small delay to ensure peerRef and internal states are ready
+        setTimeout(() => {
+          if (!peerRef.current) return;
+          users.forEach((u) => {
+            if (u.peerId === peerRef.current.id) return;
+            // Avoid duplicate attempts if we already have a connection
+            if (!peers.current[u.peerId]) {
+              try {
+                connectToNewUser(u.peerId, stream);
+              } catch (err) {
+                console.warn("[useVoiceChat] connectToNewUser failed for", u.peerId, err);
+              }
+            }
+          });
+        }, 300); // 300ms is usually enough; increase if networks are flaky
       });
 
       const handleConnect = (data: Participant) => {
+        console.debug("[user-connected] ", data);
         setParticipants((prev) => [...prev, data]);
+
+        // Give a slight delay to let the newly-connected peer finish its setup
         setTimeout(() => connectToNewUser(data.peerId, stream), 400);
       };
 
       const handleDisconnect = (peerId: string) => {
+        console.debug("[user-disconnected]", peerId);
         setParticipants((prev) => prev.filter((p) => p.peerId !== peerId));
         if (peers.current[peerId]) peers.current[peerId].close();
         delete peers.current[peerId];
@@ -108,8 +166,10 @@ export function useVoiceChat(roomId: string, username: string) {
       return () => {
         cancelled = true;
 
+        voiceSocket.off("connect", onSocketConnect);
         voiceSocket.off("user-connected", handleConnect);
         voiceSocket.off("user-disconnected", handleDisconnect);
+        voiceSocket.off("voice-room-users");
 
         Object.values(peers.current).forEach((c) => c.close());
         peers.current = {};
@@ -122,20 +182,32 @@ export function useVoiceChat(roomId: string, username: string) {
         stream.getTracks().forEach((t) => t.stop());
       };
     });
-  }, []);
+  }, [roomId, username]); // <-- add deps to be safer if those change
 
   /* -------------------- CONNECT TO NEW USER -------------------- */
   const connectToNewUser = (peerId: string, streamOverride?: MediaStream) => {
     const stream = streamOverride || myStream;
     if (!stream || !peerRef.current) return;
 
-    const call = peerRef.current.call(peerId, stream);
+    // If we already have this call active, ignore
+    if (peers.current[peerId]) return;
 
-    call.on("stream", (userStream: MediaStream) => {
-      addAudio(userStream, call.peer);
-    });
+    try {
+      const call = peerRef.current.call(peerId, stream);
 
-    peers.current[peerId] = call;
+      call.on("stream", (userStream: MediaStream) => {
+        addAudio(userStream, call.peer);
+      });
+
+      call.on("close", () => {
+        // cleanup if remote closes
+        if (peers.current[peerId]) delete peers.current[peerId];
+      });
+
+      peers.current[peerId] = call;
+    } catch (err) {
+      console.warn("[useVoiceChat] error calling peer", peerId, err);
+    }
   };
 
   /* -------------------- ADD AUDIO STREAM -------------------- */
