@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: "",
   optimizeDeps: {
-    include: ["peerjs"],
-  },
+    include: ["peerjs"]
+  }
 });
 
