@@ -3,9 +3,12 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    open: true
+  base: "/", // importante en Vercel
+  build: {
+    outDir: "dist",
   },
-  base: "./",   
+  optimizeDeps: {
+    include: ["peerjs"],
+  },
 });
 
