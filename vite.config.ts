@@ -8,4 +8,8 @@ export default defineConfig({
     open: true,
   },
   base: "./",
+  optimizeDeps: {
+    include: ["peerjs"], // ← ESTO ES LO IMPORTANTE
+  },
 });
+
