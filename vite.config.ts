@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -8,6 +9,6 @@ export default defineConfig({
   },
   base: "./",
   optimizeDeps: {
-    include: ["peerjs", "socket.io-client"], // ← AGREGA socket.io-client
+    include: ["peerjs"], // ← ESTO ES LO IMPORTANTE
   },
 });
