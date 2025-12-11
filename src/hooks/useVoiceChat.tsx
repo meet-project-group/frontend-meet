@@ -217,11 +217,16 @@ const addAudio = (stream: MediaStream, peerId?: string) => {
   audio.srcObject = stream;
   audio.autoplay = true;
 
-  // 🔥 FIX obligatorio para Chrome Android / iOS
- (audio as any).playsInline = true;                   // iOS modern
-  audio.setAttribute("playsinline", "true");      // iOS legacy
-  audio.setAttribute("webkit-playsinline", "true"); // iPhone WebKit
-  audio.muted = false;                            // evitar bloqueos
+  // FIX: soporte para móviles (Chrome / Safari)
+  (audio as any).playsInline = true;
+  audio.setAttribute("playsinline", "true");
+  audio.setAttribute("webkit-playsinline", "true");
+  audio.muted = false;
+
+  // Necesario para permitir que Chrome Android lo reproduzca sin interacción
+  audio.addEventListener("canplay", () => {
+    audio.play().catch((e) => console.warn("Autoplay bloqueado:", e));
+  });
 
   if (!peerId) return;
 
@@ -249,7 +254,6 @@ const addAudio = (stream: MediaStream, peerId?: string) => {
 
   detectVoice();
 };
-
 
   /* -------------------- END CALL -------------------- */
   const endCall = () => {
