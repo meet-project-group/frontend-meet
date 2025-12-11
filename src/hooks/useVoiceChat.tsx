@@ -1,10 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-
+import { useEffect, useRef, useState } from "react";
 import Peer from "peerjs";
-import type { MediaConnection } from "peerjs";
-
 import { voiceSocket } from "../services/voiceSocket";
-
 
 export interface Participant {
   peerId: string;
@@ -17,12 +13,10 @@ export function useVoiceChat(roomId: string, username: string) {
   const [isTalking, setIsTalking] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]);
 
-  const peerRef = useRef<Peer | null>(null);
-  const peers = useRef<Record<string, MediaConnection>>({});
+  const peers = useRef<{ [key: string]: any }>({});
+  const peerRef = useRef<any>(null);
 
-  /* ============================================================
-      INITIALIZE MICROPHONE + PEERJS + SOCKET.IO
-  ============================================================ */
+  /* -------------------- INITIALIZE AUDIO + PEER -------------------- */
   useEffect(() => {
     let cancelled = false;
 
@@ -30,9 +24,10 @@ export function useVoiceChat(roomId: string, username: string) {
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       if (cancelled) return;
+
       setMyStream(stream);
 
-      /* ---- ANALYZER: detect my voice ---- */
+      /* --- Detect my voice --- */
       const ctx = new AudioContext();
       const analyser = ctx.createAnalyser();
       const src = ctx.createMediaStreamSource(stream);
@@ -50,26 +45,23 @@ export function useVoiceChat(roomId: string, username: string) {
 
       detectMyVoice();
 
-      /* ============================================================
-          INIT PEERJS CLIENT
-      ============================================================ */
+      /* -------------------- Initialize PeerJS -------------------- */
       if (!peerRef.current) {
         const peer = new Peer({
-          host: import.meta.env.VITE_PEER_HOST,
-          port: Number(import.meta.env.VITE_PEER_PORT),
-          secure: import.meta.env.VITE_PEER_SECURE === "true",
+          host: "backend-voice-meet-1.onrender.com",
+          port: 443,
+          secure: true,
           path: "/peerjs",
           config: {
             iceServers: [
-              { urls: import.meta.env.VITE_STUN },
-              { urls: import.meta.env.VITE_ICE },
+              { urls: ["stun:stun.l.google.com:19302"] }
             ],
           },
         });
 
         peerRef.current = peer;
 
-        peer.on("open", (peerId: string) => {
+        peer.on("open", (peerId) => {
           voiceSocket.emit("join-voice-room", {
             roomId,
             peerId,
@@ -77,11 +69,11 @@ export function useVoiceChat(roomId: string, username: string) {
           });
         });
 
-        /* ---- Incoming Call ---- */
-        peer.on("call", (call: MediaConnection) => {
+        /* --- Incoming call --- */
+        peer.on("call", (call) => {
           call.answer(stream);
 
-          call.on("stream", (userStream: MediaStream) => {
+          call.on("stream", (userStream) => {
             addAudio(userStream, call.peer);
           });
 
@@ -89,42 +81,31 @@ export function useVoiceChat(roomId: string, username: string) {
         });
       }
 
-      /* ============================================================
-          SOCKET EVENTS
-      ============================================================ */
-
+      /* -------------------- Socket events -------------------- */
       voiceSocket.on("voice-room-users", (users: Participant[]) => {
         setParticipants(users);
       });
 
-      const handleUserConnected = (data: Participant) => {
+      const handleConnect = (data: Participant) => {
         setParticipants((prev) => [...prev, data]);
-
-        setTimeout(() => {
-          connectToNewUser(data.peerId, stream);
-        }, 400);
+        setTimeout(() => connectToNewUser(data.peerId, stream), 400);
       };
 
-      const handleUserDisconnected = (peerId: string) => {
+      const handleDisconnect = (peerId: string) => {
         setParticipants((prev) => prev.filter((p) => p.peerId !== peerId));
-
-        if (peers.current[peerId]) {
-          peers.current[peerId].close();
-          delete peers.current[peerId];
-        }
+        if (peers.current[peerId]) peers.current[peerId].close();
+        delete peers.current[peerId];
       };
 
-      voiceSocket.on("user-connected", handleUserConnected);
-      voiceSocket.on("user-disconnected", handleUserDisconnected);
+      voiceSocket.on("user-connected", handleConnect);
+      voiceSocket.on("user-disconnected", handleDisconnect);
 
-      /* ============================================================
-          CLEANUP
-      ============================================================ */
+      /* -------------------- CLEANUP -------------------- */
       return () => {
         cancelled = true;
 
-        voiceSocket.off("user-connected", handleUserConnected);
-        voiceSocket.off("user-disconnected", handleUserDisconnected);
+        voiceSocket.off("user-connected", handleConnect);
+        voiceSocket.off("user-disconnected", handleDisconnect);
 
         Object.values(peers.current).forEach((c) => c.close());
         peers.current = {};
@@ -139,14 +120,12 @@ export function useVoiceChat(roomId: string, username: string) {
     });
   }, []);
 
-  /* ============================================================
-      CONNECT TO NEW USER (Outgoing call)
-  ============================================================ */
+  /* -------------------- CONNECT TO NEW USER -------------------- */
   const connectToNewUser = (peerId: string, streamOverride?: MediaStream) => {
     const stream = streamOverride || myStream;
     if (!stream || !peerRef.current) return;
 
-    const call: MediaConnection = peerRef.current.call(peerId, stream);
+    const call = peerRef.current.call(peerId, stream);
 
     call.on("stream", (userStream: MediaStream) => {
       addAudio(userStream, call.peer);
@@ -155,9 +134,7 @@ export function useVoiceChat(roomId: string, username: string) {
     peers.current[peerId] = call;
   };
 
-  /* ============================================================
-      ADD INCOMING AUDIO STREAM + DETECT VOICE
-  ============================================================ */
+  /* -------------------- ADD AUDIO STREAM -------------------- */
   const addAudio = (stream: MediaStream, peerId?: string) => {
     const audio = document.createElement("audio");
     audio.srcObject = stream;
@@ -190,9 +167,7 @@ export function useVoiceChat(roomId: string, username: string) {
     detectVoice();
   };
 
-  /* ============================================================
-      END CALL
-  ============================================================ */
+  /* -------------------- END CALL -------------------- */
   const endCall = () => {
     if (myStream) myStream.getTracks().forEach((t) => t.stop());
 
