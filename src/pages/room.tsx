@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+iimport { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import "../styles/room.sass";
@@ -80,7 +80,8 @@ export default function Room() {
   };
 
   /* ================= CONTROLS ================= */
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
+
   const [camera, setCamera] = useState(false);
   const [hand, setHand] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -102,6 +103,13 @@ export default function Room() {
   const myMainVideoRef = useRef<HTMLVideoElement | null>(null);
   const myGridVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+useEffect(() => {
+  if (!audioStream) return;
+
+  audioStream.getAudioTracks().forEach((track) => {
+    track.enabled = true;
+  });
+}, [audioStream]);
 
   /* ================= VIDEO PRINCIPAL (FOCO) ================= */
   useEffect(() => {
@@ -191,19 +199,25 @@ export default function Room() {
             
           )}
 
-          {Object.entries(remoteStreams).map(([peerId]) => (
-            <video
-              key={peerId}
-              ref={(el) => {
-                remoteVideoRefs.current[peerId] = el;
-              }}
-              autoPlay
-              playsInline
-              className={`room__video-user ${
-                focusedPeer === peerId ? "is-focused" : ""
-              }`}
-            />
-          ))}
+          {Object.entries(remoteStreams).map(([peerId]) => {
+  // 👉 Si hay un video enfocado, ocultar los demás
+  if (focusedPeer && focusedPeer !== peerId) return null;
+
+  return (
+    <video
+      key={peerId}
+      ref={(el) => {
+        remoteVideoRefs.current[peerId] = el;
+      }}
+      autoPlay
+      playsInline
+      className={`room__video-user ${
+        focusedPeer === peerId ? "is-focused" : ""
+      }`}
+    />
+  );
+})}
+
         </div>
 
         {/* ===== CONTROLES ===== */}
