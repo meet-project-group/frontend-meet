@@ -191,25 +191,19 @@ export default function Room() {
             
           )}
 
-          {Object.entries(remoteStreams).map(([peerId]) => {
-  // 👉 Si hay un video enfocado, ocultar los demás
-  if (focusedPeer && focusedPeer !== peerId) return null;
-
-  return (
-    <video
-      key={peerId}
-      ref={(el) => {
-        remoteVideoRefs.current[peerId] = el;
-      }}
-      autoPlay
-      playsInline
-      className={`room__video-user ${
-        focusedPeer === peerId ? "is-focused" : ""
-      }`}
-    />
-  );
-})}
-
+          {Object.entries(remoteStreams).map(([peerId]) => (
+            <video
+              key={peerId}
+              ref={(el) => {
+                remoteVideoRefs.current[peerId] = el;
+              }}
+              autoPlay
+              playsInline
+              className={`room__video-user ${
+                focusedPeer === peerId ? "is-focused" : ""
+              }`}
+            />
+          ))}
         </div>
 
         {/* ===== CONTROLES ===== */}
