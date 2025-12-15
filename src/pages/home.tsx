@@ -155,6 +155,19 @@ const Home = () => {
           connect and collaborate with whoever you want on uv meet
         </p>
 
+
+        {/* User Manual PDF */}
+<p style={{ marginTop: "10px" }}>
+  <a
+    href="/Manual-usuario 1.pdf"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="manual-link"
+  >
+     User Manual (PDF)
+  </a>
+</p>
+
         {/* Section for creating or joining a meeting */}
         <div className="action-section">
           <p className="question">What do you want to do?</p>
