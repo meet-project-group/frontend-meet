@@ -1,17 +1,19 @@
-import { useState, useEffect, useRef } from "react";
+iimport { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import "../styles/room.sass";
 
-// Socket
+// Socket for chat messaging
 import { socket } from "../services/socket";
 
-// Hooks
+// Custom hooks for voice and video functionality
 import { useVoiceChat } from "../hooks/useVoiceChat";
 import { useVideoChat } from "../hooks/useVideoChat";
 
+// Firebase authentication
 import { getAuth } from "firebase/auth";
 
+// UI icons
 import {
   Camera,
   CameraOut,
@@ -22,6 +24,7 @@ import {
   MicOff,
 } from "../icons";
 
+// Chat message structure
 interface ChatMessage {
   sender: string;
   message: string;
@@ -29,6 +32,7 @@ interface ChatMessage {
 }
 
 export default function Room() {
+  // Room ID from URL params
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -36,6 +40,7 @@ export default function Room() {
   const auth = getAuth();
   const user = auth.currentUser;
 
+  // Resolve username from display name, email, or fallback
   const username =
     user?.displayName ||
     user?.email?.split("@")[0] ||
@@ -48,8 +53,10 @@ export default function Room() {
   const chatRef = useRef<HTMLDivElement | null>(null);
   
   /* ================= FOCUS VIDEO ================= */
+  // Peer ID of the currently focused video
   const [focusedPeer, setFocusedPeer] = useState<string | null>(null);
 
+  // Join chat room and listen for incoming messages
   useEffect(() => {
     if (!id) return;
 
@@ -66,6 +73,7 @@ export default function Room() {
     };
   }, [id, username]);
 
+  // Send chat message to the room
   const sendMessage = () => {
     if (!message.trim() || !id) return;
 
@@ -81,10 +89,11 @@ export default function Room() {
 
   /* ================= CONTROLS ================= */
   const [muted, setMuted] = useState(false);
-
   const [camera, setCamera] = useState(false);
   const [hand, setHand] = useState(false);
   const [sharing, setSharing] = useState(false);
+
+  // Confirmation flags (ask only once)
   const [cameraConfirmed, setCameraConfirmed] = useState(false);
   const [micConfirmed, setMicConfirmed] = useState(false);
 
@@ -100,35 +109,42 @@ export default function Room() {
   const { myStream: videoStream, remoteStreams } = useVideoChat(id!);
 
   /* ================= VIDEO REFS ================= */
+  // Main focused video
   const myMainVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Local user video in grid
   const myGridVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Remote users video refs indexed by peerId
   const remoteVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-useEffect(() => {
-  if (!audioStream) return;
 
-  audioStream.getAudioTracks().forEach((track) => {
-    track.enabled = true;
-  });
-}, [audioStream]);
+  // Ensure audio tracks start enabled
+  useEffect(() => {
+    if (!audioStream) return;
 
-  /* ================= VIDEO PRINCIPAL (FOCO) ================= */
+    audioStream.getAudioTracks().forEach((track) => {
+      track.enabled = true;
+    });
+  }, [audioStream]);
+
+  /* ================= MAIN VIDEO (FOCUS) ================= */
   useEffect(() => {
     if (!myMainVideoRef.current) return;
 
-    // Sin foco → mi cámara
+    // No focused peer → show local camera
     if (!focusedPeer) {
       myMainVideoRef.current.srcObject = videoStream ?? null;
       return;
     }
 
-    // Con foco → cámara remota
+    // Focused peer → show remote camera
     const remoteStream = remoteStreams[focusedPeer];
     if (remoteStream) {
       myMainVideoRef.current.srcObject = remoteStream;
     }
   }, [focusedPeer, videoStream, remoteStreams]);
 
-  /* ================= MI CAMARA EN EL GRID (MEJORA) ================= */
+  /* ================= LOCAL CAMERA IN GRID ================= */
   useEffect(() => {
     if (!videoStream || !myGridVideoRef.current) return;
 
@@ -137,7 +153,7 @@ useEffect(() => {
     }
   }, [videoStream]);
 
-  /* ================= CAMARAS REMOTAS ================= */
+  /* ================= REMOTE CAMERAS ================= */
   useEffect(() => {
     Object.entries(remoteStreams).forEach(([peerId, stream]) => {
       const video = remoteVideoRefs.current[peerId];
@@ -147,13 +163,14 @@ useEffect(() => {
     });
   }, [remoteStreams]);
 
-  /* ================= TOGGLE CAMARA ================= */
+  /* ================= TOGGLE CAMERA ================= */
   useEffect(() => {
     if (!videoStream) return;
     videoStream.getVideoTracks().forEach((t) => (t.enabled = camera));
   }, [camera, videoStream]);
 
   /* ================= CLEANUP ================= */
+  // Stop all audio and video tracks and clear video elements
   const stopAllMedia = () => {
     videoStream?.getTracks().forEach((t) => t.stop());
     audioStream?.getTracks().forEach((t) => t.stop());
@@ -166,6 +183,7 @@ useEffect(() => {
     });
   };
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopAllMedia();
@@ -178,7 +196,7 @@ useEffect(() => {
       <section className="room__main">
         <h2 className="room__title">Meeting: {id}</h2>
 
-        {/* ===== VIDEO PRINCIPAL ===== */}
+        {/* ===== MAIN VIDEO ===== */}
         <div className="room__video-grid">
           {videoStream && (
             <video
@@ -186,107 +204,106 @@ useEffect(() => {
               autoPlay
               playsInline
               muted
-              onClick={() => setFocusedPeer(null)} // ⭐ MEJORA
+              onClick={() => setFocusedPeer(null)} // remove focus
               className={`room__video-self ${
                 focusedPeer ? "is-background" : ""
               }`}
-              
               style={{
                 display: camera ? "block" : "none",
                 cursor: "pointer",
               }}
             />
-            
           )}
 
           {Object.entries(remoteStreams).map(([peerId]) => {
-  // 👉 Si hay un video enfocado, ocultar los demás
-  if (focusedPeer && focusedPeer !== peerId) return null;
+            // If a video is focused, hide others
+            if (focusedPeer && focusedPeer !== peerId) return null;
 
-  return (
-    <video
-      key={peerId}
-      ref={(el) => {
-        remoteVideoRefs.current[peerId] = el;
-      }}
-      autoPlay
-      playsInline
-      className={`room__video-user ${
-        focusedPeer === peerId ? "is-focused" : ""
-      }`}
-    />
-  );
-})}
-
+            return (
+              <video
+                key={peerId}
+                ref={(el) => {
+                  remoteVideoRefs.current[peerId] = el;
+                }}
+                autoPlay
+                playsInline
+                className={`room__video-user ${
+                  focusedPeer === peerId ? "is-focused" : ""
+                }`}
+              />
+            );
+          })}
         </div>
 
-        {/* ===== CONTROLES ===== */}
+        {/* ===== CONTROLS ===== */}
         <div className="room__controls">
+          {/* Microphone toggle */}
           <button
-  className="room__btn"
-  onClick={() => {
-    if (!audioStream) return;
+            className="room__btn"
+            onClick={() => {
+              if (!audioStream) return;
 
-    const willMute = !muted; // nuevo estado
+              const willMute = !muted;
 
-    // 👉 SOLO pregunta la primera vez que se VA A ENCENDER
-    if (!micConfirmed && !willMute) {
-      const ok = window.confirm(
-        "¿Seguro que deseas encender el micrófono?"
-      );
-      if (!ok) return;
-      setMicConfirmed(true);
-    }
+              // Ask confirmation only the first time microphone is enabled
+              if (!micConfirmed && !willMute) {
+                const ok = window.confirm(
+                  "¿Seguro que deseas encender el micrófono?"
+                );
+                if (!ok) return;
+                setMicConfirmed(true);
+              }
 
-    setMuted(willMute);
+              setMuted(willMute);
 
-    audioStream.getAudioTracks().forEach(
-      (track) => (track.enabled = !willMute)
-    );
-  }}
->
-  {muted ? <MicOff /> : <Mic />}
-</button>
+              audioStream.getAudioTracks().forEach(
+                (track) => (track.enabled = !willMute)
+              );
+            }}
+          >
+            {muted ? <MicOff /> : <Mic />}
+          </button>
 
-
-
+          {/* Camera toggle */}
           <button
-  className="room__btn"
-  onClick={() => {
-    if (!videoStream) return;
+            className="room__btn"
+            onClick={() => {
+              if (!videoStream) return;
 
-    const willTurnOn = !camera; // nuevo estado
+              const willTurnOn = !camera;
 
-    // 👉 SOLO pregunta la primera vez que se VA A ENCENDER
-    if (!cameraConfirmed && willTurnOn) {
-      const ok = window.confirm(
-        "¿Seguro que deseas encender la cámara?"
-      );
-      if (!ok) return;
-      setCameraConfirmed(true);
-    }
+              // Ask confirmation only the first time camera is enabled
+              if (!cameraConfirmed && willTurnOn) {
+                const ok = window.confirm(
+                  "¿Seguro que deseas encender la cámara?"
+                );
+                if (!ok) return;
+                setCameraConfirmed(true);
+              }
 
-    setCamera(willTurnOn);
+              setCamera(willTurnOn);
 
-    videoStream.getVideoTracks().forEach(
-      (track) => (track.enabled = willTurnOn)
-    );
-  }}
->
-  {camera ? <Camera /> : <CameraOut />}
-</button>
+              videoStream.getVideoTracks().forEach(
+                (track) => (track.enabled = willTurnOn)
+              );
+            }}
+          >
+            {camera ? <Camera /> : <CameraOut />}
+          </button>
 
-
+          {/* Screen sharing toggle (UI only) */}
           <button className="room__btn" onClick={() => setSharing(!sharing)}>
             {sharing ? <Sharex /> : <Share />}
           </button>
 
+          {/* Raise hand toggle */}
           <button className="room__btn" onClick={() => setHand(!hand)}>
             <span style={{ opacity: hand ? 1 : 0.4 }}>
               <Hand />
             </span>
           </button>
 
+          {/* End call */}
           <button
             className="room__btn room__btn--hangup"
             onClick={() => {
@@ -300,9 +317,9 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* ===== PARTICIPANTES ===== */}
+      {/* ===== PARTICIPANTS GRID ===== */}
       <aside className="room__grid">
-        {/* YO */}
+        {/* LOCAL USER */}
         <div className="room__grid-item" onClick={() => setFocusedPeer(null)}>
           {videoStream && (
             <video
@@ -327,7 +344,7 @@ useEffect(() => {
           )}
         </div>
 
-        {/* OTROS */}
+        {/* OTHER PARTICIPANTS */}
         {participants
           .filter((u) => u.peerId !== voicePeer.current?.id)
           .filter((u) => u.peerId !== focusedPeer)
