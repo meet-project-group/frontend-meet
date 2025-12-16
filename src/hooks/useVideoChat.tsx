@@ -2,23 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import Peer from "peerjs";
 import { videoSocket } from "../services/videoSocket";
 
-// Custom hook that manages video chat logic using PeerJS and Socket.IO
 export function useVideoChat(roomId: string) {
-  // Local media stream (camera or fake stream)
   const [myStream, setMyStream] = useState<MediaStream | null>(null);
-
-  // Remote users' media streams mapped by peerId
   const [remoteStreams, setRemoteStreams] = useState<{ [key: string]: MediaStream }>({});
 
-  // Reference to the PeerJS instance
   const peerRef = useRef<any>(null);
-
-  // Active peer connections mapped by peerId
   const peers = useRef<{ [key: string]: any }>({});
+  const [remoteScreenStream, setRemoteScreenStream] =
+  useState<MediaStream | null>(null);
 
   // ------------------------------------------------
-  // CREATE A FAKE VIDEO STREAM (CANVAS VIDEO TRACK)
-  // Used when no camera is available
+  // CREA UN STREAM FALSO (FAKE VIDEO TRACK)
   // ------------------------------------------------
   const createFakeVideoStream = () => {
     const canvas = document.createElement("canvas");
@@ -29,22 +23,20 @@ export function useVideoChat(roomId: string) {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Capture canvas as a MediaStream at 10 FPS
-    const fakeStream = canvas.captureStream(10);
+    const fakeStream = canvas.captureStream(10); // 10 FPS
     return fakeStream;
   };
 
   useEffect(() => {
     let cancelled = false;
 
-    // Ensure socket connection
     if (!videoSocket.connected) videoSocket.connect();
 
     (async () => {
       let stream: MediaStream | null = null;
 
       // ------------------------------
-      // TRY TO ACCESS USER CAMERA
+      // INTENTAR OBTENER LA CÁMARA
       // ------------------------------
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -52,22 +44,20 @@ export function useVideoChat(roomId: string) {
           audio: false,
         });
       } catch (err) {
-        // Fallback when no camera is available
-        console.warn("⚠ No camera available. Using fake video stream.");
+        console.warn("⚠ No hay cámara disponible. Usando video falso.");
       }
 
-      // If no real camera stream, create a fake one
+      // Si no hay cámara → crear fake stream
       if (!stream) {
         stream = createFakeVideoStream();
       }
 
       if (cancelled) return;
 
-      // Store local stream
       setMyStream(stream);
 
       // ------------------------------------------------
-      // INITIALIZE PEERJS CONNECTION
+      // INICIALIZAR PEERJS
       // ------------------------------------------------
       const peer = new Peer({
         host: import.meta.env.VITE_PEER_HOST,
@@ -84,33 +74,52 @@ export function useVideoChat(roomId: string) {
 
       peerRef.current = peer;
 
-      // When PeerJS connection opens, join the video room
       peer.on("open", (peerId) => {
         videoSocket.emit("join-video-room", { roomId, peerId });
       });
 
       // ------------------------------------------------
-      // HANDLE INCOMING CALLS
+      // LLAMADAS ENTRANTES
       // ------------------------------------------------
       peer.on("call", (call) => {
-        // Answer incoming call with local stream
-        call.answer(stream);
+  call.answer(stream);
 
-        // Receive remote stream
-        call.on("stream", (remoteStream: MediaStream) => {
-          const id = call.peer;
-          setRemoteStreams((prev) => ({
-            ...prev,
-            [id]: remoteStream,
-          }));
-        });
+  call.on("stream", (remoteStream: MediaStream) => {
+    const videoTrack = remoteStream.getVideoTracks()[0];
 
-        // Store active call
-        peers.current[call.peer] = call;
-      });
+    const isScreen =
+      call.metadata?.type === "screen" ||
+      videoTrack?.label.toLowerCase().includes("screen") ||
+      videoTrack?.label.toLowerCase().includes("display");
+
+    if (isScreen) {
+      setRemoteScreenStream(remoteStream);
+      return;
+    }
+
+    // 🎥 cámara normal
+    setRemoteStreams((prev) => ({
+      ...prev,
+      [call.peer]: remoteStream,
+    }));
+  });
+
+  call.on("close", () => {
+    setRemoteStreams((prev) => {
+      const copy = { ...prev };
+      delete copy[call.peer];
+      return copy;
+    });
+
+    setRemoteScreenStream(null);
+  });
+
+  peers.current[call.peer] = call;
+});
+
 
       // ------------------------------------------------
-      // HANDLE NEW USER CONNECTED
+      // NUEVO USUARIO
       // ------------------------------------------------
       videoSocket.off("user-connected");
       videoSocket.on("user-connected", ({ peerId }) => {
@@ -118,15 +127,13 @@ export function useVideoChat(roomId: string) {
       });
 
       // ------------------------------------------------
-      // HANDLE USER DISCONNECTED
+      // USUARIO DESCONECTADO
       // ------------------------------------------------
       videoSocket.off("user-disconnected");
       videoSocket.on("user-disconnected", (peerId) => {
-        // Close and remove peer connection
         if (peers.current[peerId]) peers.current[peerId].close();
         delete peers.current[peerId];
 
-        // Remove remote stream
         setRemoteStreams((prev) => {
           const copy = { ...prev };
           delete copy[peerId];
@@ -135,38 +142,33 @@ export function useVideoChat(roomId: string) {
       });
     })();
 
-    // Cleanup when component unmounts or roomId changes
     return () => {
       cancelled = true;
 
-      // Close all peer calls
       Object.values(peers.current).forEach((call) => call.close());
       peers.current = {};
 
-      // Destroy PeerJS instance
       peerRef.current?.destroy();
       peerRef.current = null;
 
-      // Stop all local media tracks
       if (myStream) myStream.getTracks().forEach((t) => t.stop());
 
-      // Disconnect socket
       videoSocket.disconnect();
     };
   }, [roomId]);
 
   // ------------------------------------------------
-  // CONNECT TO A NEW USER
-  // Initiates a PeerJS call to another peer
+  // CONECTAR A UN USUARIO NUEVO
   // ------------------------------------------------
   const connectToUser = (peerId: string, stream: MediaStream) => {
     if (!peerRef.current) return;
     if (peers.current[peerId]) return;
 
-    // Call the remote peer with local stream
-    const call = peerRef.current.call(peerId, stream);
+    const call = peerRef.current.call(peerId, stream, {
+  metadata: { type: "camera" },
+});
 
-    // Receive remote stream
+
     call.on("stream", (remoteStream: MediaStream) => {
       const id = call.peer;
 
@@ -176,7 +178,6 @@ export function useVideoChat(roomId: string) {
       }));
     });
 
-    // Handle call close
     call.on("close", () => {
       setRemoteStreams((prev) => {
         const copy = { ...prev };
@@ -185,12 +186,15 @@ export function useVideoChat(roomId: string) {
       });
     });
 
-    // Store active call
     peers.current[peerId] = call;
   };
 
-  // Expose local stream, remote streams, and peer reference
-  return { myStream, remoteStreams, peerRef };
+  return {
+  myStream,
+  remoteStreams,
+  remoteScreenStream, // 🔥
+  peerRef,
+};
+
+
 }
-
-
