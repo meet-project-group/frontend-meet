@@ -178,13 +178,21 @@ export function useVideoChat(roomId: string) {
       }));
     });
 
-    call.on("close", () => {
-      setRemoteStreams((prev) => {
-        const copy = { ...prev };
-        delete copy[peerId];
-        return copy;
-      });
-    });
+   call.on("close", () => {
+  const isScreen = call.metadata?.type === "screen";
+
+  if (isScreen) {
+    setRemoteScreenStream(null);
+    return; // ⛔ NO borrar cámara
+  }
+
+  setRemoteStreams((prev) => {
+    const copy = { ...prev };
+    delete copy[peerId];
+    return copy;
+  });
+});
+
 
     peers.current[peerId] = call;
   };
