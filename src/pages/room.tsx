@@ -96,6 +96,12 @@ export default function Room() {
   // Confirmation flags (ask only once)
   const [cameraConfirmed, setCameraConfirmed] = useState(false);
   const [micConfirmed, setMicConfirmed] = useState(false);
+  const stopScreenShare = () => {
+  screenStream?.getTracks().forEach((t) => t.stop());
+  setScreenStream(null);
+  setSharing(false);
+  setFocusedPeer(null);
+};
 
   /* ================= VOICE + VIDEO ================= */
   const {
@@ -106,7 +112,13 @@ export default function Room() {
     peerRef: voicePeer,
   } = useVoiceChat(id!, username);
 
-  const { myStream: videoStream, remoteStreams } = useVideoChat(id!);
+  const {
+  myStream: videoStream,
+  remoteStreams,
+  remoteScreenStream,
+  peerRef, // 🔥 FALTABA ESTO
+} = useVideoChat(id!);
+
 
   /* ================= VIDEO REFS ================= */
   // Main focused video
@@ -117,6 +129,11 @@ export default function Room() {
 
   // Remote users video refs indexed by peerId
   const remoteVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  /* ================= SCREEN SHARE ================= */
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  
+
+
 
   // Ensure audio tracks start enabled
   useEffect(() => {
@@ -129,20 +146,39 @@ export default function Room() {
 
   /* ================= MAIN VIDEO (FOCUS) ================= */
   useEffect(() => {
-    if (!myMainVideoRef.current) return;
+  if (!myMainVideoRef.current) return;
 
-    // No focused peer → show local camera
-    if (!focusedPeer) {
-      myMainVideoRef.current.srcObject = videoStream ?? null;
-      return;
-    }
+  // 🔥 1. PANTALLA REMOTA (MÁXIMA PRIORIDAD)
+  if (remoteScreenStream) {
+    myMainVideoRef.current.srcObject = remoteScreenStream;
+    return;
+  }
 
-    // Focused peer → show remote camera
-    const remoteStream = remoteStreams[focusedPeer];
-    if (remoteStream) {
-      myMainVideoRef.current.srcObject = remoteStream;
-    }
-  }, [focusedPeer, videoStream, remoteStreams]);
+  // 🔥 2. MI PANTALLA
+  if (focusedPeer === "SCREEN" && screenStream) {
+    myMainVideoRef.current.srcObject = screenStream;
+    return;
+  }
+
+  // 3. SIN FOCO → CÁMARA LOCAL
+  if (!focusedPeer) {
+    myMainVideoRef.current.srcObject = videoStream ?? null;
+    return;
+  }
+
+  // 4. FOCO EN USUARIO REMOTO
+  const remoteStream = remoteStreams[focusedPeer];
+  if (remoteStream) {
+    myMainVideoRef.current.srcObject = remoteStream;
+  }
+}, [
+  focusedPeer,
+  videoStream,
+  remoteStreams,
+  screenStream,
+  remoteScreenStream, // 🔥 IMPORTANTE
+]);
+
 
   /* ================= LOCAL CAMERA IN GRID ================= */
   useEffect(() => {
@@ -183,12 +219,41 @@ export default function Room() {
     });
   };
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      stopAllMedia();
-    };
-  }, []);
+  return () => {
+    stopAllMedia();
+    stopScreenShare();
+  };
+}, []);
+
+const startScreenShare = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30 },
+      audio: false,
+    });
+
+    setScreenStream(stream);
+    setSharing(true);
+    setFocusedPeer("SCREEN");
+
+    Object.keys(remoteStreams).forEach((peerId) => {
+      peerRef.current?.call(peerId, stream, {
+        metadata: { type: "screen" },
+      });
+    });
+
+    stream.getVideoTracks()[0].onended = stopScreenShare;
+  } catch (err) {
+    console.error("Screen share error:", err);
+  }
+};
+
+
+
+
+
+
 
   /* ================= UI ================= */
   return (
@@ -197,23 +262,27 @@ export default function Room() {
         <h2 className="room__title">Meeting: {id}</h2>
 
         {/* ===== MAIN VIDEO ===== */}
-        <div className="room__video-grid">
-          {videoStream && (
-            <video
-              ref={myMainVideoRef}
-              autoPlay
-              playsInline
-              muted
-              onClick={() => setFocusedPeer(null)} // remove focus
-              className={`room__video-self ${
-                focusedPeer ? "is-background" : ""
-              }`}
-              style={{
-                display: camera ? "block" : "none",
-                cursor: "pointer",
-              }}
-            />
-          )}
+<div className="room__video-grid">
+
+ 
+  {/* ===== MY CAMERA ===== */}
+  {videoStream && (
+    <video
+      ref={myMainVideoRef}
+      autoPlay
+      playsInline
+      muted
+      onClick={() => setFocusedPeer(null)}
+      className={`room__video-self ${
+        focusedPeer ? "is-background" : ""
+      }`}
+      style={{
+  display: "block",
+  cursor: "pointer",
+}}
+
+    />
+  )}
 
           {Object.entries(remoteStreams).map(([peerId]) => {
             // If a video is focused, hide others
@@ -292,9 +361,16 @@ export default function Room() {
           </button>
 
           {/* Screen sharing toggle (UI only) */}
-          <button className="room__btn" onClick={() => setSharing(!sharing)}>
-            {sharing ? <Sharex /> : <Share />}
-          </button>
+          <button
+  className="room__btn"
+  onClick={() => {
+    if (!sharing) startScreenShare();
+    else stopScreenShare();
+  }}
+>
+  {sharing ? <Sharex /> : <Share />}
+</button>
+
 
           {/* Raise hand toggle */}
           <button className="room__btn" onClick={() => setHand(!hand)}>
