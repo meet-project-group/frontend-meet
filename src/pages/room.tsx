@@ -96,12 +96,11 @@ export default function Room() {
   // Confirmation flags (ask only once)
   const [cameraConfirmed, setCameraConfirmed] = useState(false);
   const [micConfirmed, setMicConfirmed] = useState(false);
-  const stopScreenShare = () => {
-  // 🔥 cerrar TODAS las llamadas WebRTC
+ const stopScreenShare = () => {
+  // 🔥 cerrar TODAS las llamadas WebRTC de pantalla
   Object.values(screenCallsRef.current).forEach((call) => {
     call.close();
   });
-
   screenCallsRef.current = {};
 
   // 🔥 detener tracks
@@ -109,7 +108,16 @@ export default function Room() {
 
   setScreenStream(null);
   setSharing(false);
+
+  // 🔥 quitar foco
   setFocusedPeer(null);
+
+  // 🔥 FORZAR volver a la cámara local
+  requestAnimationFrame(() => {
+    if (myMainVideoRef.current && videoStream) {
+      myMainVideoRef.current.srcObject = videoStream;
+    }
+  });
 };
 
 
